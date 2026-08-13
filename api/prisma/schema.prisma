@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+model Player {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String?
+  points       Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  attempts     Attempt[]
+}
+
+model Mission {
+  id          String     @id @default(cuid())
+  title       String
+  description String
+  difficulty  Difficulty @default(EASY)
+  points      Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  attempts    Attempt[]
+}
+
+model Attempt {
+  id          String   @id @default(cuid())
+  playerId    String
+  missionId   String
+  score       Int      @default(0)
+  completedAt DateTime @default(now())
+
+  player  Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, missionId])
+}

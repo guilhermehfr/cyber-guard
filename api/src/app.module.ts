@@ -5,6 +5,7 @@ import { configuration } from "@/config/config.js";
 import { envValidationSchema } from "@/config/env.validation.js";
 
 import { HealthController } from "@/health.controller.js";
+import { PrismaModule } from "@/infrastructure/database/prisma.module.js";
 
 const envFilePath = process.env.NODE_ENV === "production" ? ".env.prod" : ".env.local";
 
@@ -20,6 +21,7 @@ const envFilePath = process.env.NODE_ENV === "production" ? ".env.prod" : ".env.
         allowUnknown: true,
       },
     }),
+    PrismaModule,
   ],
   controllers: [HealthController],
 })
