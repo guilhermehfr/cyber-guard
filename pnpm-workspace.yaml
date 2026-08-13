@@ -1,0 +1,11 @@
+packages:
+  - "api"
+  - "web"
+  - "contracts"
+
+catalog:
+  typescript: ^5.9.3
+
+allowBuilds:
+  sharp: false
+  unrs-resolver: false

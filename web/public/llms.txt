@@ -1,0 +1,45 @@
+# CyberGuard
+
+CyberGuard is a gamified cybersecurity awareness platform.
+
+## Purpose
+
+CyberGuard helps users learn cybersecurity concepts through short interactive quizzes. Players complete missions, earn points, and compete on a real-time leaderboard.
+
+## Main Topics
+
+- Phishing
+- Passwords and authentication
+- Social engineering
+- Public Wi-Fi security
+- Data protection
+
+## Gamification
+
+Missions have three difficulty levels:
+
+- EASY: 2 points
+- MEDIUM: 5 points
+- HARD: 10 points
+
+Players cannot complete the same mission more than once.
+
+## Main User Flow
+
+Landing Page → Registration/Login → Play → Mission → Quiz → Result → Leaderboard.
+
+## Architecture
+
+CyberGuard is a modular monolithic application with a Next.js frontend and NestJS backend.
+
+## Backend
+
+NestJS, Fastify, Prisma, PostgreSQL, JWT, WebSocket.
+
+## Frontend
+
+Next.js, React, TypeScript.
+
+## Realtime
+
+WebSocket is used for leaderboard and player score updates.
