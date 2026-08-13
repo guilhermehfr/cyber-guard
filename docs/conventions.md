@@ -90,6 +90,33 @@ Use Biome for formatting and linting.
 
 Keep code readable, predictable, and maintainable.
 
+## Imports
+
+Group imports by category, with exactly one blank line between categories.
+
+Categories are based on the import's actual role, in this order:
+
+- External dependencies
+- Internal aliases
+- Components
+- Services / libraries
+- Types
+- Local relative imports
+
+Keep imports from the same category together. Do not create arbitrary categories for individual imports.
+
+```ts
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+
+import { configuration } from "@/config/config.js";
+import { envValidationSchema } from "@/config/env.validation.js";
+
+import { HealthController } from "@/health.controller.js";
+
+import type { AppConfig } from "@/config/config.js";
+```
+
 ## Documentation
 
 Documentation should describe decisions that matter to future contributors and agents.

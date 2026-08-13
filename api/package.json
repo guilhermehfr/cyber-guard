@@ -5,8 +5,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "dev": "tsc -w -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+    "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
     "lint": "biome check src",
     "lint:fix": "biome check --write src",
@@ -28,6 +28,8 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.8",
     "@types/node": "^26.2.0",
+    "tsc-alias": "^1.9.1",
+    "tsx": "^4.23.12",
     "typescript": "catalog:"
   }
 }
