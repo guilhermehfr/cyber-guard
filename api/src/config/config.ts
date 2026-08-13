@@ -18,22 +18,30 @@ export interface AppConfig {
   };
 }
 
+const getEnv = (key: string): string => {
+  const value = process.env[key];
+  if (value === undefined) {
+    throw new Error(`Missing environment variable: ${key}`);
+  }
+  return value;
+};
+
 export const configuration = (): AppConfig => ({
   app: {
-    environment: process.env.NODE_ENV ?? "development",
-    port: Number(process.env.PORT ?? 3000),
-    webUrl: process.env.WEB_URL ?? "http://localhost:3001",
+    environment: getEnv("NODE_ENV"),
+    port: Number(getEnv("PORT")),
+    webUrl: getEnv("WEB_URL"),
   },
   database: {
-    url: process.env.DATABASE_URL ?? "",
+    url: getEnv("DATABASE_URL"),
   },
   jwt: {
-    secret: process.env.JWT_SECRET ?? "",
-    expiresIn: process.env.JWT_EXPIRES_IN ?? "1d",
+    secret: getEnv("JWT_SECRET"),
+    expiresIn: getEnv("JWT_EXPIRES_IN"),
   },
   google: {
-    clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-    callbackUrl: process.env.GOOGLE_CALLBACK_URL ?? "",
+    clientId: getEnv("GOOGLE_CLIENT_ID"),
+    clientSecret: getEnv("GOOGLE_CLIENT_SECRET"),
+    callbackUrl: getEnv("GOOGLE_CALLBACK_URL"),
   },
 });

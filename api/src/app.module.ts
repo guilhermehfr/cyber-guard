@@ -1,8 +1,10 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { AppController } from "./app.controller.js";
-import { configuration } from "./config/config.js";
-import { envValidationSchema } from "./config/env.validation.js";
+
+import { configuration } from "@/config/config.js";
+import { envValidationSchema } from "@/config/env.validation.js";
+
+import { HealthController } from "@/health.controller.js";
 
 const envFilePath = process.env.NODE_ENV === "production" ? ".env.prod" : ".env.local";
 
@@ -19,6 +21,6 @@ const envFilePath = process.env.NODE_ENV === "production" ? ".env.prod" : ".env.
       },
     }),
   ],
-  controllers: [AppController],
+  controllers: [HealthController],
 })
 export class AppModule {}
