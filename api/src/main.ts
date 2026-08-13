@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
@@ -14,6 +15,8 @@ async function bootstrap() {
   const { port, webUrl } = configService.getOrThrow<AppConfig["app"]>("app");
 
   app.enableCors({ origin: webUrl, credentials: true });
+
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   await app.listen(port, "0.0.0.0");
 }

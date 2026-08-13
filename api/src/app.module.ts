@@ -6,6 +6,8 @@ import { envValidationSchema } from "@/config/env.validation.js";
 
 import { HealthController } from "@/health.controller.js";
 import { PrismaModule } from "@/infrastructure/database/prisma.module.js";
+import { AuthModule } from "@/modules/auth/auth.module.js";
+import { PlayersModule } from "@/modules/players/players.module.js";
 
 const envFilePath = process.env.NODE_ENV === "production" ? ".env.prod" : ".env.local";
 
@@ -22,6 +24,8 @@ const envFilePath = process.env.NODE_ENV === "production" ? ".env.prod" : ".env.
       },
     }),
     PrismaModule,
+    AuthModule,
+    PlayersModule,
   ],
   controllers: [HealthController],
 })
