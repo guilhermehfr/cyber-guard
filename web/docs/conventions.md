@@ -43,6 +43,13 @@ Do not duplicate backend response types manually.
 
 Do not calculate authoritative scores on the client.
 
+The API base URL must come from environment variables, never hardcoded:
+
+- `NEXT_PUBLIC_API_URL` for browser-side code (embedded at build time);
+- `API_URL` for server-side code (runtime, may use the Docker service name).
+
+The frontend runs on port `3001`; the API runs on port `3000`.
+
 ## Quiz Flow
 
 The frontend may maintain the current quiz state locally.

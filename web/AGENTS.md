@@ -52,6 +52,16 @@ Use the shared contracts from the root `contracts/` package when applicable.
 
 Do not duplicate API types manually when an existing shared contract exists.
 
+The API base URL is provided through environment variables, never hardcoded:
+
+- `NEXT_PUBLIC_API_URL` — used by browser-side code; embedded in the bundle during
+  `next build`, so it must be set at build time (e.g. `http://localhost:3000` locally,
+  the public API URL in production).
+- `API_URL` — used by server-side code; resolved at runtime and may use the internal
+  Docker service name (e.g. `http://api:3000`).
+
+The frontend runs on port `3001` locally; the API runs on port `3000`.
+
 ## Quiz
 
 Quiz state may be managed locally for UI purposes.

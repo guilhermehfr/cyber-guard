@@ -26,6 +26,27 @@ The `contracts/` directory contains types and contracts shared between the API a
 
 Do not place Prisma models, database-specific types, or internal implementation details inside shared contracts.
 
+## Local Development
+
+The API runs on port `3000`; the web application runs on port `3001`.
+
+Environment files are committed only as examples:
+
+- `api/.env.local` (example: `api/.env.local.example`)
+- `web/.env.local` (example: `web/.env.local.example`)
+
+The web application uses two API URL variables:
+
+- `NEXT_PUBLIC_API_URL` — browser-side, embedded at build time;
+- `API_URL` — server-side, resolved at runtime (Docker service name inside compose).
+
+The API CORS origin is configured through `WEB_URL` and restricted to that single
+origin. Never hardcode CORS origins or API URLs in code.
+
+Docker Compose manages the full stack (PostgreSQL, API, web) from the repository
+root. Containers start in dependency order: the API waits for a healthy PostgreSQL,
+and the web application waits for a healthy API.
+
 ## Communication
 
 HTTP is used for normal application operations.

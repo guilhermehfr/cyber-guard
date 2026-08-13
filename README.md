@@ -36,7 +36,56 @@ Landing Page → Autenticação → Missões → Quiz → Resultado → Ranking.
 
 ```text
 /
-├── api/          # Backend
-├── web/          # Frontend
-├── contracts/    # Contratos compartilhados
-└── docker-compose.yml
+├── api/          # Backend (NestJS + Fastify, porta 3000)
+├── web/          # Frontend (Next.js, porta 3001)
+├── contracts/    # Contratos compartilhados entre api e web
+├── docker-compose.yml
+└── pnpm-workspace.yaml
+```
+
+## Executando localmente
+
+Monorepo pnpm com três workspaces: `api`, `web` e `contracts`.
+
+Instale as dependências:
+
+```sh
+pnpm install
+```
+
+Crie os arquivos de ambiente a partir dos exemplos:
+
+```sh
+cp api/.env.local.example api/.env.local
+cp web/.env.local.example web/.env.local
+```
+
+Preencha `api/.env.local` com as variáveis obrigatórias (`JWT_SECRET`, `GOOGLE_CLIENT_ID`,
+`GOOGLE_CLIENT_SECRET`). A API valida as variáveis na inicialização e falha se estiverem ausentes.
+
+Para desenvolvimento fora do Docker:
+
+```sh
+pnpm --filter @cyber/api dev     # API em http://localhost:3000
+pnpm --filter @cyber/web dev     # Web em http://localhost:3001
+```
+
+### Com Docker
+
+Suba a stack completa (PostgreSQL + API + Web):
+
+```sh
+pnpm docker:up
+pnpm docker:down     # para a stack (mantém volume e imagens)
+pnpm docker:reset    # remove containers, volume, imagens e rede
+```
+
+- API: http://localhost:3000
+- Web: http://localhost:3001
+- PostgreSQL: localhost:5432 (somente para depuração local)
+
+A Web só inicia depois que a API responde ao healthcheck; a API só inicia depois que o
+PostgreSQL está saudável. CORS da API liberado apenas para a origem configurada em `WEB_URL`.
+
+Em produção, `NEXT_PUBLIC_API_URL` deve ser fornecida no build da Web com a URL pública da API;
+`API_URL` (server-side) aponta para o serviço interno. Não há domínio fixo no código.
