@@ -9,3 +9,5 @@ catalog:
 allowBuilds:
   sharp: false
   unrs-resolver: false
+
+verifyDepsBeforeRun: false

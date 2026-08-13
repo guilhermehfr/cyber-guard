@@ -1,0 +1,64 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    ports:
+      - "${API_PORT:-3000}:3000"
+    env_file:
+      - path: api/.env.local
+        required: false
+    environment:
+      NODE_ENV: development
+      PORT: "3000"
+      WEB_URL: http://localhost:3001
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/cyberguard
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+    ports:
+      - "${WEB_PORT:-3001}:3001"
+    env_file:
+      - path: web/.env.local
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+      API_URL: http://api:3000
+    depends_on:
+      api:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-cyberguard}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-cyberguard}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

@@ -6,7 +6,10 @@
   "scripts": {
     "build": "pnpm -r build",
     "dev": "pnpm -r --parallel --include-deps dev",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:reset": "docker compose down -v --rmi all --remove-orphans"
   },
   "keywords": [],
   "author": "",
@@ -14,7 +17,7 @@
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
-      "version": "^11.3.0",
+      "version": "11.21.0",
       "onFail": "download"
     }
   },

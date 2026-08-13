@@ -1,11 +1,12 @@
 # Dependencies
 node_modules/
+**/node_modules
 
-# Build
+# Build output
 dist/
+**/dist
 .next/
-out/
-*.tsbuildinfo
+**/.next
 
 # Environment
 .env
@@ -14,21 +15,27 @@ out/
 !.env.local.example
 !.env.prod.example
 
-# Logs
-*.log
-logs/
+# Git
+.git/
+.gitignore
 
-# OS
-.DS_Store
-Thumbs.db
+# Documentation
+docs/
 
 # IDE
 .vscode/
 .idea/
 
-# Coverage
+# Logs
+*.log
+
+# Tests
 coverage/
 
-# Temporary
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
 .tmp/
 temp/
