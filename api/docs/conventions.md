@@ -17,6 +17,16 @@ A module normally contains:
 
 Only create additional directories when the module actually needs them.
 
+## Configuration
+
+Access environment variables only through the centralized config in `src/config/config.ts`.
+
+Do not read `process.env` elsewhere.
+
+Environment variables are validated at boot with the Joi schema in `src/config/env.validation.ts`.
+
+The CORS origin comes from `WEB_URL` and is restricted to that single origin.
+
 ## Controllers
 
 Controllers handle HTTP transport concerns.
