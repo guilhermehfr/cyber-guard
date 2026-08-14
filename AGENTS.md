@@ -130,6 +130,8 @@ Keep documentation concise and synchronized with the actual implementation.
 
 Make focused commits.
 
+Every commit must include a clear, simple, and direct description of its changes in the message body.
+
 Do not combine unrelated changes into a single commit.
 
 Do not rewrite or squash existing commits unless explicitly requested.

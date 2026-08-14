@@ -117,6 +117,15 @@ import { HealthController } from "@/health.controller.js";
 import type { AppConfig } from "@/config/config.js";
 ```
 
+## ESM Import Conventions
+
+The project runs on ESM. TypeScript source imports use explicit `.js` extensions so the emitted output resolves at runtime under Node's ESM resolver.
+
+- Do not strip `.js` extensions to satisfy a linter; they are required for ESM resolution.
+- NestJS dependency-injection classes referenced in constructor parameters require normal runtime imports rather than `import type`, because `emitDecoratorMetadata` records the class reference for injection. A `biome-ignore` for `useImportType` is intentional in those cases.
+- DTO imports should be value imports when NestJS requires their runtime metatype (for example `@Body() dto: RegisterDto` so `ValidationPipe` can validate), and type-only imports when the class is used purely as a type.
+- Linting rules may change independently of the project's ESM and runtime requirements; a lint suggestion must not override a runtime requirement.
+
 ## Documentation
 
 Documentation should describe decisions that matter to future contributors and agents.

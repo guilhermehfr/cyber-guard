@@ -9,11 +9,13 @@ import type { AppConfig } from "@/config/config.js";
 export interface JwtPayload {
   sub: string;
   email: string;
+  name: string;
 }
 
 export interface AuthenticatedUser {
   id: string;
   email: string;
+  name: string;
 }
 
 @Injectable()
@@ -27,6 +29,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   validate(payload: JwtPayload): AuthenticatedUser {
-    return { id: payload.sub, email: payload.email };
+    return { id: payload.sub, email: payload.email, name: payload.name };
   }
 }

@@ -16,7 +16,8 @@
     "lint:fix": "biome check --write src",
     "format": "biome format --write src",
     "format:check": "biome format src",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "license": "ISC",
   "dependencies": {
@@ -24,6 +25,7 @@
     "@nestjs/common": "^11.1.29",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.1.29",
+    "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-fastify": "^11.1.29",
     "@prisma/adapter-pg": "^7.9.1",
@@ -45,6 +47,7 @@
     "prisma": "^7.9.1",
     "tsc-alias": "^1.9.1",
     "tsx": "^4.23.12",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "^4.1.10"
   }
 }
