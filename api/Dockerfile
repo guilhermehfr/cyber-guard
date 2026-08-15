@@ -26,5 +26,9 @@ COPY --from=build /app/contracts/dist ./contracts/dist
 COPY --from=build /app/contracts/package.json ./contracts/package.json
 COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=build /app/api/prisma ./api/prisma
+COPY --from=build /app/api/prisma.config.ts ./api/prisma.config.ts
+COPY api/docker-entrypoint.sh /app/api/docker-entrypoint.sh
 EXPOSE 3000
-CMD ["node", "api/dist/main.js"]
+ENTRYPOINT ["/bin/sh", "/app/api/docker-entrypoint.sh"]
+CMD ["node", "dist/main.js"]
