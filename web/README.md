@@ -7,6 +7,7 @@ Frontend da plataforma CyberGuard, construído com Next.js.
 - Next.js 16 (App Router + Turbopack)
 - React 19
 - Tailwind CSS 4
+- @cyber/contracts para contratos HTTP compartilhados com a API
 - Biome para formatação e lint
 - pnpm como gerenciador de pacotes (monorepo)
 
@@ -45,15 +46,20 @@ serviço interno (ex.: `http://api:3000` no Docker Compose).
 ## Scripts
 
 ```sh
-pnpm dev      # servidor de desenvolvimento em http://localhost:3001
+pnpm dev      # servidor de desenvolvimento em http://localhost:3002
 pnpm build    # build de produção
 pnpm start    # executa o build em http://localhost:3001
 pnpm lint     # biome check .
 pnpm format   # biome format --write .
 ```
 
-O frontend roda na porta **3001** (a API usa a 3000). A porta é definida nos
-scripts (`next dev -p 3001` / `next start -p 3001`) e no container via `PORT=3001`.
+A API roda na porta `3000`. O frontend usa portas diferentes conforme o fluxo:
+
+- **Desenvolvimento local** (`pnpm dev`): `http://localhost:3002`;
+- **Docker/containerizado** (`pnpm start` / container): `http://localhost:3001`.
+
+As portas são definidas nos scripts (`next dev -p 3002` / `next start -p 3001`) e
+no container via `PORT=3001`.
 
 ## Docker
 
@@ -73,7 +79,19 @@ No Docker Compose, a Web expõe `3001:3001`, conecta-se à API por
 
 ```text
 src/
-└── app/          # Rotas (App Router)
-    ├── layout.tsx
-    └── page.tsx
+├── app/                    # Rotas (App Router)
+│   ├── layout.tsx
+│   ├── page.tsx
+│   └── play/
+│       └── page.tsx
+├── components/             # Componentes de UI
+│   ├── landing/
+│   ├── layout/
+│   └── play/
+├── features/               # Recursos por domínio
+│   └── auth/
+├── lib/
+│   ├── api/                # Cliente HTTP
+│   └── websocket.ts
+└── proxy.ts
 ```

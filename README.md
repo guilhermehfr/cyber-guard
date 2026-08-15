@@ -37,7 +37,7 @@ Landing Page → Autenticação → Missões → Quiz → Resultado → Ranking.
 ```text
 /
 ├── api/          # Backend (NestJS + Fastify, porta 3000)
-├── web/          # Frontend (Next.js, porta 3001)
+├── web/          # Frontend (Next.js, porta 3002 dev / 3001 Docker)
 ├── contracts/    # Contratos compartilhados entre api e web
 ├── docker-compose.yml
 └── pnpm-workspace.yaml
@@ -67,8 +67,22 @@ Para desenvolvimento fora do Docker:
 
 ```sh
 pnpm --filter @cyber/api dev     # API em http://localhost:3000
-pnpm --filter @cyber/web dev     # Web em http://localhost:3001
+pnpm --filter @cyber/web dev     # Web em http://localhost:3002 (desenvolvimento local)
 ```
+
+A API roda na porta `3000`. O frontend usa duas portas conforme o fluxo:
+
+- **Desenvolvimento local** (`pnpm dev`): `http://localhost:3002`;
+- **Docker/containerizado**: `http://localhost:3001`.
+
+Com a API de pé, os dados de desenvolvimento (players para o ranking) podem ser
+populados com:
+
+```sh
+pnpm --filter @cyber/api db:seed
+```
+
+O seed é idempotente, serve apenas para desenvolvimento e não roda em produção.
 
 ### Com Docker
 

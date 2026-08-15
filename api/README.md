@@ -6,8 +6,11 @@ Backend da plataforma CyberGuard, construído com NestJS e o adaptador Fastify.
 
 - NestJS 11
 - Fastify
+- Prisma
 - PostgreSQL (via Docker Compose)
 - @nestjs/config + Joi para configuração e validação de variáveis de ambiente
+- @cyber/contracts para contratos HTTP compartilhados com o frontend
+- Vitest para testes unitários
 - Biome para formatação e lint
 - pnpm como gerenciador de pacotes (monorepo)
 
@@ -38,13 +41,24 @@ A API valida as variáveis obrigatórias na inicialização e falha caso estejam
 ## Scripts
 
 ```sh
-pnpm dev           # compila e observa mudanças (tsc --watch)
+pnpm dev           # executa e observa mudanças (tsx watch src/main.ts)
 pnpm build         # compila para dist/
 pnpm start         # executa dist/main.js
+pnpm test          # roda os testes unitários (vitest)
+pnpm test:watch    # roda os testes unitários em watch mode
 pnpm lint          # biome check src
 pnpm lint:fix      # biome check --write src
 pnpm format        # biome format --write src
 pnpm format:check  # biome format src
+pnpm db:seed       # popula dados de desenvolvimento (players fictícios)
+```
+
+Comandos Prisma:
+
+```sh
+pnpm prisma:generate   # gera o client Prisma
+pnpm prisma:migrate    # cria e aplica migrations
+pnpm prisma:studio     # abre o Prisma Studio
 ```
 
 ## Configuração
@@ -55,6 +69,23 @@ A configuração da aplicação é centralizada em `src/config/`:
   (app, database, jwt, google). Não acesse `process.env` fora daqui.
 - `env.validation.ts` — schema Joi que valida as variáveis de ambiente
   obrigatórias no boot da aplicação.
+
+## Banco de dados e seed
+
+O Prisma é configurado em `prisma.config.ts` (schema, migrations e comando de seed).
+A config de ambiente é carregada pelo mesmo padrão do `NODE_ENV` (`.env.local` no
+desenvolvimento, `.env.prod` na produção).
+
+Seed de desenvolvimento:
+
+```sh
+pnpm db:seed
+```
+
+Cria ou atualiza um conjunto fixo de players fictícios (identificados por email,
+portanto idempotente) para desenvolvimento local. É um comando manual: nunca é
+executado automaticamente no boot da aplicação e recusa-se a rodar em produção
+(`NODE_ENV=production`).
 
 ## CORS
 
@@ -92,7 +123,28 @@ src/
 ├── config/
 │   ├── config.ts
 │   └── env.validation.ts
-├── app.controller.ts
+├── health.controller.ts
 ├── app.module.ts
-└── main.ts
+├── main.ts
+├── infrastructure/
+│   └── database/
+│       ├── prisma.module.ts
+│       └── prisma.service.ts
+└── modules/
+    ├── auth/
+    │   ├── dto/
+    │   ├── guards/
+    │   ├── strategies/
+    │   ├── auth.controller.ts
+    │   ├── auth.module.ts
+    │   ├── auth.service.ts
+    │   └── password.service.ts
+    ├── players/
+    ├── missions/
+    └── ranking/
+prisma/
+├── migrations/
+├── schema.prisma
+└── seed.ts
+prisma.config.ts
 ```

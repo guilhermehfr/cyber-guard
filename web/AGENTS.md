@@ -60,7 +60,8 @@ The API base URL is provided through environment variables, never hardcoded:
 - `API_URL` — used by server-side code; resolved at runtime and may use the internal
   Docker service name (e.g. `http://api:3000`).
 
-The frontend runs on port `3001` locally; the API runs on port `3000`.
+The API runs on port `3000`. The frontend runs on port `3002` with local `pnpm dev`
+and on port `3001` in the Docker/containerized workflow.
 
 ## Quiz
 
@@ -70,7 +71,7 @@ The frontend must not assume that locally stored answers, scores, or completion 
 
 ## Realtime
 
-WebSocket is used for leaderboard and player score updates.
+WebSocket is planned but not implemented.
 
 Do not use WebSocket where a normal HTTP request is sufficient.
 

@@ -8,17 +8,29 @@ The API is a modular monolith built with NestJS, Fastify, Prisma, and PostgreSQL
 
 ## Current State
 
-The API currently has only the foundation layer in place:
+Implemented:
 
 - NestJS with the Fastify adapter;
 - centralized configuration in `src/config/config.ts`;
 - environment validation with Joi in `src/config/env.validation.ts`;
-- CORS restricted to the configured frontend origin;
-- Docker setup (`api/Dockerfile`, root `docker-compose.yml`).
+- CORS restricted to the configured frontend origins;
+- Prisma integration through `src/infrastructure/database/prisma.service.ts`;
+- `auth` module: register, login and current-player endpoints with JWT;
+- `players` module: internal player lookups used by auth;
+- `missions` module: list missions and complete a mission. Completion is
+  transactional, awards points from the persisted mission, and reuses the
+  `Attempt` model as the completion record, enforced by `@@unique([playerId, missionId])`
+  and the `P2002` handling;
+- `ranking` module: top 10 players ordered by points with deterministic
+  tie-breaking;
+- shared HTTP contracts in the `contracts/` package used at the API boundary;
+- Vitest unit tests for the services;
+- development seed (`pnpm db:seed`) that upserts fictional players for local
+  development.
 
-The domain modules (`auth`, `players`, `missions`, `attempts`, `ranking`), Prisma
-integration, and WebSocket gateway described below are the target architecture and
-are not implemented yet.
+Not implemented yet:
+
+- WebSocket gateway (planned; REST ranking is implemented).
 
 ## Foundation Conventions
 
@@ -51,8 +63,10 @@ Current modules include:
 - `auth`
 - `players`
 - `missions`
-- `attempts`
 - `ranking`
+
+There is no standalone `attempts` module: mission completions are recorded
+through the `Attempt` Prisma model inside the `missions` module.
 
 Keep responsibilities inside their respective modules.
 
@@ -81,7 +95,9 @@ Prefer database constraints when enforcing data integrity.
 
 ## Realtime
 
-WebSocket is currently used for leaderboard and player score updates.
+The WebSocket gateway is planned but not implemented.
+
+The ranking leaderboard is currently served over REST by the `ranking` module.
 
 Do not use WebSocket for normal quiz interactions unless explicitly required.
 

@@ -76,11 +76,12 @@ Never trust user identity or authorization data supplied directly by the client.
 
 ## WebSocket
 
-The ranking gateway handles realtime communication.
+The WebSocket gateway is planned but not implemented.
 
-WebSocket should notify clients about state changes rather than replace normal HTTP operations.
+The ranking leaderboard is currently served over REST.
 
-The server remains the source of truth.
+When the gateway is introduced, WebSocket should notify clients about state changes
+rather than replace normal HTTP operations.
 
 ## Error Handling
 

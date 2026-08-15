@@ -48,7 +48,8 @@ The API base URL must come from environment variables, never hardcoded:
 - `NEXT_PUBLIC_API_URL` for browser-side code (embedded at build time);
 - `API_URL` for server-side code (runtime, may use the Docker service name).
 
-The frontend runs on port `3001`; the API runs on port `3000`.
+The API runs on port `3000`. The frontend runs on port `3002` with local `pnpm dev`
+and on port `3001` in the Docker/containerized workflow.
 
 ## Quiz Flow
 
@@ -64,10 +65,7 @@ The backend validates the submitted answers and determines the authoritative res
 
 ## Realtime
 
-WebSocket updates are used for:
-
-- leaderboard changes;
-- current player's score changes.
+WebSocket is planned but not implemented.
 
 Realtime messages should update or invalidate relevant UI state.
 

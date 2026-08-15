@@ -22,13 +22,32 @@ PostgreSQL is the persistent source of truth.
 
 ## Shared Contracts
 
-The `contracts/` directory contains types and contracts shared between the API and frontend.
+The `contracts/` package contains the API wire contracts shared between the API and frontend.
 
-Do not place Prisma models, database-specific types, or internal implementation details inside shared contracts.
+`contracts/` is an API contract package, not a generic shared-types folder. Rules:
+
+- contains only data crossing the backend ↔ frontend HTTP boundary;
+- is framework-agnostic: no NestJS, Prisma, React, Next.js, or browser imports;
+- dates are represented as ISO `string` values (the JSON wire format);
+- the API `Difficulty` is the string union `"EASY" | "MEDIUM" | "HARD"`;
+- the backend maps internal Prisma/domain representations to the wire contracts
+  at the API boundary.
+
+Types that remain outside `contracts/`:
+
+- NestJS DTO classes stay backend-local (they carry framework validation decorators);
+- Prisma-generated types stay backend-local;
+- frontend UI-specific types stay frontend-local (for example `DifficultyVariant`
+  is a frontend presentation concern and is not merged with the API `Difficulty`).
 
 ## Local Development
 
-The API runs on port `3000`; the web application runs on port `3001`.
+The API runs on port `3000`.
+
+The frontend runs on different ports depending on the workflow:
+
+- local development (`pnpm dev`): `3002`;
+- Docker/containerized frontend: `3001`.
 
 Environment files are committed only as examples:
 
@@ -40,8 +59,15 @@ The web application uses two API URL variables:
 - `NEXT_PUBLIC_API_URL` — browser-side, embedded at build time;
 - `API_URL` — server-side, resolved at runtime (Docker service name inside compose).
 
-The API CORS origin is configured through `WEB_URL` and restricted to that single
-origin. Never hardcode CORS origins or API URLs in code.
+`NEXT_PUBLIC_AUTH_BYPASS` bypasses the client-side `/play` authentication guard.
+It is development-only: it is honored only when `NODE_ENV` is `development`, so
+production builds compile the bypass out even if the variable is set. Never enable
+it in a production build.
+
+The API CORS origin is configured through `WEB_URL` and restricted to allowed
+frontend origins. `WEB_URL` accepts a comma-separated list of origins (used in
+development to support multiple frontend ports). Never use `*` or hardcode CORS
+origins or API URLs in code.
 
 Docker Compose manages the full stack (PostgreSQL, API, web) from the repository
 root. Containers start in dependency order: the API waits for a healthy PostgreSQL,
@@ -51,7 +77,8 @@ and the web application waits for a healthy API.
 
 HTTP is used for normal application operations.
 
-WebSocket is used for realtime leaderboard and player score updates.
+WebSocket is planned but not implemented; the leaderboard is currently served over
+REST.
 
 Do not introduce realtime infrastructure where normal HTTP communication is sufficient.
 
