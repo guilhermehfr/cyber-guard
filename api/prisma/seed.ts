@@ -3,6 +3,8 @@ import { PrismaClient } from "@prisma/client";
 import { hash } from "argon2";
 import { config } from "dotenv";
 
+import { MISSIONS, QUESTIONS_BY_DIFFICULTY } from "./seed-data.js";
+
 config({ path: process.env.NODE_ENV === "production" ? ".env.prod" : ".env.local" });
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -143,7 +145,73 @@ async function main() {
 
   console.log(`Seed finished: ${created} players created, ${updated} players updated.`);
 
+  await seedMissions(prisma);
+  const { questions, answers } = await seedQuestions(prisma);
+  console.log(
+    `Seed finished: ${questions} questions created, ${answers} answers created.`,
+  );
+
   await prisma.$disconnect();
+}
+
+async function seedMissions(prisma: PrismaClient): Promise<void> {
+  let created = 0;
+
+  for (const mission of MISSIONS) {
+    const existing = await prisma.mission.findUnique({
+      where: { id: mission.id },
+      select: { id: true },
+    });
+    if (existing) {
+      continue;
+    }
+
+    await prisma.mission.create({ data: mission });
+    created += 1;
+  }
+
+  console.log(`Seed missions: ${created} missions created.`);
+}
+
+async function seedQuestions(
+  prisma: PrismaClient,
+): Promise<{ questions: number; answers: number }> {
+  await prisma.answer.deleteMany({});
+  await prisma.question.deleteMany({});
+
+  let questions = 0;
+  let answers = 0;
+
+  for (const [difficulty, seedQuestions] of Object.entries(QUESTIONS_BY_DIFFICULTY)) {
+    const mission = await prisma.mission.findFirst({
+      where: { difficulty: difficulty as (typeof MISSIONS)[number]["difficulty"] },
+      orderBy: { createdAt: "asc" },
+    });
+    if (!mission) {
+      throw new Error(`Cannot seed questions: no ${difficulty} mission found`);
+    }
+
+    for (const question of seedQuestions) {
+      await prisma.question.create({
+        data: {
+          id: question.id,
+          missionId: mission.id,
+          prompt: question.prompt,
+          answers: {
+            create: question.answers.map((answer) => ({
+              id: answer.id,
+              text: answer.text,
+              isCorrect: answer.isCorrect,
+            })),
+          },
+        },
+      });
+      questions += 1;
+      answers += question.answers.length;
+    }
+  }
+
+  return { questions, answers };
 }
 
 void main();

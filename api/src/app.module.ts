@@ -10,6 +10,7 @@ import { AuthModule } from "@/modules/auth/auth.module.js";
 import { MissionsModule } from "@/modules/missions/missions.module.js";
 import { PlayersModule } from "@/modules/players/players.module.js";
 import { RankingModule } from "@/modules/ranking/ranking.module.js";
+import { RealtimeModule } from "@/modules/realtime/realtime.module.js";
 
 const envFilePath = process.env.NODE_ENV === "production" ? ".env.prod" : ".env.local";
 
@@ -30,6 +31,7 @@ const envFilePath = process.env.NODE_ENV === "production" ? ".env.prod" : ".env.
     MissionsModule,
     PlayersModule,
     RankingModule,
+    RealtimeModule,
   ],
   controllers: [HealthController],
 })

@@ -29,6 +29,8 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-fastify": "^11.1.29",
+    "@nestjs/platform-ws": "^11.1.29",
+    "@nestjs/websockets": "^11.1.29",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "argon2": "^0.45.1",
@@ -38,12 +40,14 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "ws": "^8.21.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.8",
     "@types/node": "^26.2.0",
     "@types/passport-jwt": "^4.0.1",
+    "@types/ws": "^8.18.1",
     "dotenv": "^17.4.2",
     "prisma": "^7.9.1",
     "tsc-alias": "^1.9.1",

@@ -3,6 +3,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
+import { WsAdapter } from "@nestjs/platform-ws";
 
 import { AppModule } from "@/app.module.js";
 
@@ -10,6 +11,8 @@ import type { AppConfig } from "@/config/config.js";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
+
+  app.useWebSocketAdapter(new WsAdapter(app.getHttpServer()));
 
   const configService = app.get(ConfigService);
   const { port, webUrl } = configService.getOrThrow<AppConfig["app"]>("app");
