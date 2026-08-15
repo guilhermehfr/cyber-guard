@@ -11,7 +11,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: "3000"
-      WEB_URL: http://localhost:3001
+      WEB_URL: http://localhost:3001,http://localhost:3002
       DATABASE_URL: postgresql://postgres:postgres@db:5432/cyberguard
     depends_on:
       db:

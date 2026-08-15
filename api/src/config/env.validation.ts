@@ -5,7 +5,21 @@ export const envValidationSchema = Joi.object({
 
   PORT: Joi.number().default(3000),
 
-  WEB_URL: Joi.string().uri().default("http://localhost:3001"),
+  WEB_URL: Joi.string()
+    .custom((value: string, helpers) => {
+      const urls = value
+        .split(",")
+        .map((url) => url.trim())
+        .filter(Boolean);
+      for (const url of urls) {
+        const { error } = Joi.string().uri().validate(url);
+        if (error) {
+          return helpers.error("any.invalid");
+        }
+      }
+      return value;
+    })
+    .default("http://localhost:3001"),
 
   DATABASE_URL: Joi.string().required(),
 

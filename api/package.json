@@ -9,6 +9,7 @@
     "prebuild": "prisma generate",
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
+    "db:seed": "prisma db seed",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",

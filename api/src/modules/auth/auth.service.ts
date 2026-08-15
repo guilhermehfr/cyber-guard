@@ -1,6 +1,8 @@
+import type { AuthResponse, PlayerProfile } from "@cyber/contracts";
 import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
 // biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { JwtService } from "@nestjs/jwt";
+import type { Player } from "@prisma/client";
 
 // biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { PlayersService } from "@/modules/players/players.service.js";
@@ -10,22 +12,6 @@ import type { RegisterDto } from "./dto/register.dto.js";
 // biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { PasswordService } from "./password.service.js";
 
-export interface RegisterResponse {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: Date;
-}
-
-export interface AuthResponse {
-  accessToken: string;
-  player: {
-    id: string;
-    name: string;
-    email: string;
-  };
-}
-
 @Injectable()
 export class AuthService {
   constructor(
@@ -34,7 +20,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<RegisterResponse> {
+  async register(dto: RegisterDto): Promise<AuthResponse> {
     const email = dto.email.trim().toLowerCase();
     const existing = await this.playersService.findByEmail(email);
     if (existing) {
@@ -48,11 +34,11 @@ export class AuthService {
       passwordHash,
     });
 
+    const accessToken = await this.signToken(player);
+
     return {
-      id: player.id,
-      name: player.name,
-      email: player.email,
-      createdAt: player.createdAt,
+      accessToken,
+      player: await this.toPlayerProfile(player, 0),
     };
   }
 
@@ -69,19 +55,40 @@ export class AuthService {
       throw new UnauthorizedException("Invalid credentials");
     }
 
-    const accessToken = await this.jwtService.signAsync({
+    const completedMissions = await this.playersService.countCompletedMissions(player.id);
+
+    return {
+      accessToken: await this.signToken(player),
+      player: await this.toPlayerProfile(player, completedMissions),
+    };
+  }
+
+  async me(playerId: string): Promise<PlayerProfile> {
+    const player = await this.playersService.findById(playerId);
+    if (!player) {
+      throw new UnauthorizedException();
+    }
+
+    const completedMissions = await this.playersService.countCompletedMissions(player.id);
+
+    return this.toPlayerProfile(player, completedMissions);
+  }
+
+  private signToken(player: Player): Promise<string> {
+    return this.jwtService.signAsync({
       sub: player.id,
       email: player.email,
       name: player.name,
     });
+  }
 
+  private async toPlayerProfile(player: Player, completedMissions: number): Promise<PlayerProfile> {
     return {
-      accessToken,
-      player: {
-        id: player.id,
-        name: player.name,
-        email: player.email,
-      },
+      id: player.id,
+      name: player.name,
+      email: player.email,
+      points: player.points,
+      completedMissions,
     };
   }
 }

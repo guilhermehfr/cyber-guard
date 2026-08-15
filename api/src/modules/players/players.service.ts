@@ -25,4 +25,8 @@ export class PlayersService {
   findById(id: string): Promise<Player | null> {
     return this.prisma.player.findUnique({ where: { id } });
   }
+
+  countCompletedMissions(playerId: string): Promise<number> {
+    return this.prisma.attempt.count({ where: { playerId } });
+  }
 }

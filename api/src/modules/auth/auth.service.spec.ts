@@ -20,20 +20,37 @@ const player: Player = {
   updatedAt: new Date("2026-08-14T12:00:00.000Z"),
 };
 
+const playerProfile = {
+  id: player.id,
+  name: player.name,
+  email: player.email,
+  points: 0,
+  completedMissions: 0,
+};
+
 function createMocks() {
   const findByEmail = vi.fn();
+  const findById = vi.fn();
   const create = vi.fn();
+  const countCompletedMissions = vi.fn();
   const hash = vi.fn();
   const verify = vi.fn();
   const signAsync = vi.fn();
 
-  const playersService = { findByEmail, create } as unknown as PlayersService;
+  const playersService = {
+    findByEmail,
+    findById,
+    create,
+    countCompletedMissions,
+  } as unknown as PlayersService;
   const passwordService = { hash, verify } as unknown as PasswordService;
   const jwtService = { signAsync } as unknown as JwtService;
 
   return {
     findByEmail,
+    findById,
     create,
+    countCompletedMissions,
     hash,
     verify,
     signAsync,
@@ -56,11 +73,12 @@ const loginDto = { email: "ada@example.com", password: "s3cret-password" } as Lo
 
 describe("AuthService", () => {
   describe("register", () => {
-    it("normalizes the email and persists the hashed password", async () => {
+    it("normalizes the email, persists the hashed password, and returns an access token", async () => {
       const mocks = createMocks();
       mocks.findByEmail.mockResolvedValue(null);
       mocks.hash.mockResolvedValue("hashed-password");
       mocks.create.mockResolvedValue(player);
+      mocks.signAsync.mockResolvedValue("signed-token");
       const service = createService(mocks);
 
       const result = await service.register({ ...registerDto, email: "  Ada@Example.com  " });
@@ -73,10 +91,8 @@ describe("AuthService", () => {
         passwordHash: "hashed-password",
       });
       expect(result).toEqual({
-        id: player.id,
-        name: "Ada",
-        email: "ada@example.com",
-        createdAt: player.createdAt,
+        accessToken: "signed-token",
+        player: playerProfile,
       });
     });
 
@@ -85,6 +101,7 @@ describe("AuthService", () => {
       mocks.findByEmail.mockResolvedValue(null);
       mocks.hash.mockResolvedValue("hashed-password");
       mocks.create.mockResolvedValue(player);
+      mocks.signAsync.mockResolvedValue("signed-token");
       const service = createService(mocks);
 
       const result = await service.register(registerDto);
@@ -105,16 +122,18 @@ describe("AuthService", () => {
   });
 
   describe("login", () => {
-    it("returns an access token and the player on valid credentials", async () => {
+    it("returns an access token and the expanded player on valid credentials", async () => {
       const mocks = createMocks();
       mocks.findByEmail.mockResolvedValue(player);
       mocks.verify.mockResolvedValue(true);
+      mocks.countCompletedMissions.mockResolvedValue(0);
       mocks.signAsync.mockResolvedValue("signed-token");
       const service = createService(mocks);
 
       const result = await service.login({ ...loginDto, email: "  ADA@Example.com  " });
 
       expect(mocks.verify).toHaveBeenCalledWith("s3cret-password", player.passwordHash);
+      expect(mocks.countCompletedMissions).toHaveBeenCalledWith(player.id);
       expect(mocks.signAsync).toHaveBeenCalledWith({
         sub: player.id,
         email: "ada@example.com",
@@ -122,7 +141,7 @@ describe("AuthService", () => {
       });
       expect(result).toEqual({
         accessToken: "signed-token",
-        player: { id: player.id, name: player.name, email: player.email },
+        player: playerProfile,
       });
     });
 
@@ -130,6 +149,7 @@ describe("AuthService", () => {
       const mocks = createMocks();
       mocks.findByEmail.mockResolvedValue(player);
       mocks.verify.mockResolvedValue(true);
+      mocks.countCompletedMissions.mockResolvedValue(0);
       mocks.signAsync.mockResolvedValue("signed-token");
       const service = createService(mocks);
 
@@ -169,6 +189,33 @@ describe("AuthService", () => {
       await expect(service.login(loginDto)).rejects.toBeInstanceOf(UnauthorizedException);
       expect(mocks.verify).not.toHaveBeenCalled();
       expect(mocks.signAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("me", () => {
+    it("returns the database-backed profile with completed missions count", async () => {
+      const mocks = createMocks();
+      mocks.findById.mockResolvedValue({ ...player, points: 250 });
+      mocks.countCompletedMissions.mockResolvedValue(3);
+      const service = createService(mocks);
+
+      const result = await service.me(player.id);
+
+      expect(mocks.findById).toHaveBeenCalledWith(player.id);
+      expect(mocks.countCompletedMissions).toHaveBeenCalledWith(player.id);
+      expect(result).toEqual({
+        ...playerProfile,
+        points: 250,
+        completedMissions: 3,
+      });
+    });
+
+    it("throws UnauthorizedException when the player does not exist", async () => {
+      const mocks = createMocks();
+      mocks.findById.mockResolvedValue(null);
+      const service = createService(mocks);
+
+      await expect(service.me(player.id)).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });
 });
