@@ -1,15 +1,24 @@
 export type {
   AuthResponse,
+  AuthenticatedUser,
+  JwtPayload,
   LoginRequest,
   PlayerProfile,
   RegisterRequest,
 } from "./auth.js";
 
+export type { ApiErrorBody } from "./error.js";
+
 export type {
+  CompleteMissionRequest,
   CompleteMissionResponse,
+  CompletedMissionIdsResponse,
   Difficulty,
   Mission,
+  MissionAnswer,
   MissionCompletion,
+  MissionQuestion,
+  MissionQuestionsResponse,
 } from "./mission.js";
 
 export type {
@@ -17,3 +26,11 @@ export type {
   RankingEntry,
   RankingResponse,
 } from "./ranking.js";
+
+export type {
+  PlayerScoreUpdatedEvent,
+  RankingUpdatedEvent,
+  RealtimeEvent,
+  RealtimeEventMap,
+  RealtimeEventName,
+} from "./realtime.js";

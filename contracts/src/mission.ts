@@ -16,8 +16,37 @@ export interface MissionCompletion {
   completedAt: string;
 }
 
+export interface MissionAnswer {
+  id: string;
+  text: string;
+}
+
+export interface MissionQuestion {
+  id: string;
+  prompt: string;
+  answers: MissionAnswer[];
+}
+
+export interface MissionQuestionsResponse {
+  missionId: string;
+  questions: MissionQuestion[];
+}
+
+export interface CompleteMissionRequest {
+  answers: Array<{
+    questionId: string;
+    answerId: string;
+  }>;
+}
+
 export interface CompleteMissionResponse {
   completion: MissionCompletion;
+  correctCount: number;
+  totalQuestions: number;
   pointsAwarded: number;
   playerPoints: number;
+}
+
+export interface CompletedMissionIdsResponse {
+  missionIds: string[];
 }
