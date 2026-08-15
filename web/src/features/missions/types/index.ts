@@ -1,1 +1,1 @@
-export type { Mission } from "@cyber/contracts";
+export type { Difficulty, Mission } from "@cyber/contracts";

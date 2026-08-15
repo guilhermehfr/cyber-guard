@@ -1,8 +1,6 @@
-export interface ApiErrorData {
-  statusCode: number;
-  message: string | string[];
-  error?: string;
-}
+import type { ApiErrorBody } from "@cyber/contracts";
+
+export type ApiErrorData = ApiErrorBody;
 
 export class ApiError extends Error {
   readonly status: number;
