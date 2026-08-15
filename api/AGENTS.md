@@ -17,20 +17,26 @@ Implemented:
 - Prisma integration through `src/infrastructure/database/prisma.service.ts`;
 - `auth` module: register, login and current-player endpoints with JWT;
 - `players` module: internal player lookups used by auth;
-- `missions` module: list missions and complete a mission. Completion is
-  transactional, awards points from the persisted mission, and reuses the
-  `Attempt` model as the completion record, enforced by `@@unique([playerId, missionId])`
-  and the `P2002` handling;
+- `missions` module: list missions, list a mission's questions
+  (`GET /missions/:id/questions`, no correctness data), complete a mission, and
+  list the authenticated player's completed mission ids (`GET /missions/completed`).
+  Completion is transactional: a submission must contain exactly one answer for
+  every mission question, submitted answers are validated against the persisted
+  mission questions (duplicates, multiple answers per question, and out-of-mission
+  references are rejected), `correctCount` is derived exclusively from
+  `Answer.isCorrect`, the score is `correctCount * mission.points` persisted in
+  `Attempt.score`, and `Player.points` increases by the score. Reusing the same
+  mission more than once is prevented by `@@unique([playerId, missionId])` and the
+  `P2002` handling;
 - `ranking` module: top 10 players ordered by points with deterministic
   tie-breaking;
 - shared HTTP contracts in the `contracts/` package used at the API boundary;
 - Vitest unit tests for the services;
 - development seed (`pnpm db:seed`) that upserts fictional players for local
-  development.
-
-Not implemented yet:
-
-- WebSocket gateway (planned; REST ranking is implemented).
+  development;
+- `realtime` module: WebSocket gateway (public, read-only) that broadcasts
+  `ranking.updated` and `player.score.updated` events after a mission completion
+  commits.
 
 ## Foundation Conventions
 
@@ -64,6 +70,7 @@ Current modules include:
 - `players`
 - `missions`
 - `ranking`
+- `realtime`
 
 There is no standalone `attempts` module: mission completions are recorded
 through the `Attempt` Prisma model inside the `missions` module.
@@ -95,9 +102,14 @@ Prefer database constraints when enforcing data integrity.
 
 ## Realtime
 
-The WebSocket gateway is planned but not implemented.
+A WebSocket gateway (`realtime` module) broadcasts `ranking.updated` and
+`player.score.updated` events after a mission completion commits.
 
-The ranking leaderboard is currently served over REST by the `ranking` module.
+The gateway is public and read-only: it carries no authentication and only
+notifies clients of state changes.
+
+The ranking leaderboard is still served over REST by the `ranking` module;
+realtime events signal clients to refresh.
 
 Do not use WebSocket for normal quiz interactions unless explicitly required.
 

@@ -71,7 +71,11 @@ The frontend must not assume that locally stored answers, scores, or completion 
 
 ## Realtime
 
-WebSocket is planned but not implemented.
+A WebSocket client (`web/src/lib/websocket.ts`) connects to the API `/realtime`
+gateway and receives `ranking.updated` and `player.score.updated` events.
+
+Realtime events are used to invalidate or refresh UI state; the authoritative data
+is always fetched over REST.
 
 Do not use WebSocket where a normal HTTP request is sufficient.
 

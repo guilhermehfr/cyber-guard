@@ -101,5 +101,10 @@ pnpm docker:reset    # remove containers, volume, imagens e rede
 A Web só inicia depois que a API responde ao healthcheck; a API só inicia depois que o
 PostgreSQL está saudável. CORS da API liberado apenas para a origem configurada em `WEB_URL`.
 
+No primeiro início (ou após `docker:reset`), o entrypoint do contêiner da API aplica as
+migrations e executa o seed automaticamente (`prisma migrate deploy` + `prisma db seed`),
+tornando um `docker:up` em banco vazio auto-suficiente. O seed é idempotente e seguro em
+reinicializações.
+
 Em produção, `NEXT_PUBLIC_API_URL` deve ser fornecida no build da Web com a URL pública da API;
 `API_URL` (server-side) aponta para o serviço interno. Não há domínio fixo no código.

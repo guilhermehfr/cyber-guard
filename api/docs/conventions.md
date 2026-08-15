@@ -66,6 +66,21 @@ Use database constraints to enforce integrity where appropriate.
 
 For example, mission completion must prevent the same player from completing the same mission more than once.
 
+## Missions
+
+`GET /missions/:id/questions` exposes a mission's questions without any
+correctness information: the payload only carries question prompts and answer texts.
+
+`POST /missions/:id/complete` evaluates the submitted answers server-side.
+A submission must contain exactly one answer for every question of the mission:
+duplicate `questionId` values, multiple answers for the same question, answers
+referencing questions outside the mission, and answers that do not belong to
+their submitted question are rejected. Only after all validations pass are the
+answers evaluated. The correct count is derived exclusively from
+`Answer.isCorrect`. The score is `correctCount * mission.points`, stored in
+`Attempt.score`, and `Player.points` increases by the same amount. The mission
+timer is a frontend concern and is neither validated nor persisted by the API.
+
 ## Authentication
 
 Authentication is handled through the authentication module.
@@ -76,12 +91,14 @@ Never trust user identity or authorization data supplied directly by the client.
 
 ## WebSocket
 
-The WebSocket gateway is planned but not implemented.
+A WebSocket gateway in the `realtime` module broadcasts `ranking.updated` and
+`player.score.updated` events after a mission completion commits.
 
-The ranking leaderboard is currently served over REST.
+The gateway is public and read-only: it carries no authentication and never sends
+sensitive data (tokens, passwords, hashes).
 
-When the gateway is introduced, WebSocket should notify clients about state changes
-rather than replace normal HTTP operations.
+WebSocket notifies clients about state changes rather than replacing normal HTTP
+operations; the ranking leaderboard is still served over REST.
 
 ## Error Handling
 

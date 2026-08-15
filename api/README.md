@@ -83,8 +83,9 @@ pnpm db:seed
 ```
 
 Cria ou atualiza um conjunto fixo de players fictícios (identificados por email,
-portanto idempotente) para desenvolvimento local. É um comando manual: nunca é
-executado automaticamente no boot da aplicação e recusa-se a rodar em produção
+portanto idempotente) para desenvolvimento local. Fora do Docker é um comando manual;
+no Docker, o entrypoint do contêiner da API executa `prisma migrate deploy` e este seed
+automaticamente a cada início. Em ambos os casos recusa-se a rodar em produção
 (`NODE_ENV=production`).
 
 ## CORS
@@ -113,6 +114,9 @@ pnpm docker:reset   # remove containers, volume, imagens e rede
 - Dados do PostgreSQL persistentes no volume nomeado `pgdata`.
 - A API só inicia após o healthcheck do PostgreSQL responder.
 - A API possui healthcheck próprio (`GET /`); a Web só inicia após a API ficar saudável.
+- No primeiro início (ou após `docker:reset`), o entrypoint aplica as migrations e executa
+  o seed automaticamente (`prisma migrate deploy` + `prisma db seed`), tornando a stack
+  auto-suficiente em banco vazio.
 
 Ajuste credenciais do banco via `POSTGRES_USER`, `POSTGRES_PASSWORD` e `POSTGRES_DB`.
 

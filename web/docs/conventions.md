@@ -65,9 +65,13 @@ The backend validates the submitted answers and determines the authoritative res
 
 ## Realtime
 
-WebSocket is planned but not implemented.
+A WebSocket connection (`web/src/lib/websocket.ts`) receives realtime events from
+the API gateway on `/realtime`.
 
-Realtime messages should update or invalidate relevant UI state.
+Realtime events signal that server-side state changed; the client should refetch
+the affected REST resources. The ranking is still loaded via `GET /ranking`.
+
+Do not send credentials or sensitive data over the realtime channel.
 
 ## Styling
 

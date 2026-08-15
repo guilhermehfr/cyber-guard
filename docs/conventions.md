@@ -33,6 +33,10 @@ The `contracts/` package contains the API wire contracts shared between the API 
 - the backend maps internal Prisma/domain representations to the wire contracts
   at the API boundary.
 
+Realtime event types (`RealtimeEvent`, `ranking.updated`, `player.score.updated`)
+also live in `contracts/` and follow the same rules (data crosses the API boundary
+over the WebSocket channel).
+
 Types that remain outside `contracts/`:
 
 - NestJS DTO classes stay backend-local (they carry framework validation decorators);
@@ -77,8 +81,12 @@ and the web application waits for a healthy API.
 
 HTTP is used for normal application operations.
 
-WebSocket is planned but not implemented; the leaderboard is currently served over
-REST.
+A WebSocket gateway on `/realtime` broadcasts `ranking.updated` and
+`player.score.updated` events after a mission completion commits. The gateway is
+public and read-only; it never carries credentials or sensitive data.
+
+Realtime events notify clients that server-side state changed so they can refetch
+the affected REST resources (the leaderboard remains served over REST).
 
 Do not introduce realtime infrastructure where normal HTTP communication is sufficient.
 
