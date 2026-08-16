@@ -10,6 +10,7 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
+ENV NODE_OPTIONS="--max-old-space-size=1024"
 COPY contracts/ contracts/
 COPY api/ api/
 RUN pnpm --filter @cyber/contracts build && pnpm --filter @cyber/api build

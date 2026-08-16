@@ -13,6 +13,7 @@ FROM deps AS build
 ARG NEXT_PUBLIC_API_URL=http://localhost:3000
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--max-old-space-size=1536"
 COPY contracts/ contracts/
 COPY web/ web/
 RUN pnpm --filter @cyber/contracts build && pnpm --filter @cyber/web build
@@ -34,4 +35,4 @@ COPY --from=build /app/contracts ./contracts
 COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build /app/pnpm-lock.yaml ./pnpm-lock.yaml
 EXPOSE 3001
-CMD ["pnpm", "--dir", "web", "start"]
+CMD ["pnpm", "--dir", "web", "exec", "next", "start", "-p", "3001"]
