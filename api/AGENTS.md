@@ -18,16 +18,23 @@ Implemented:
 - `auth` module: register, login and current-player endpoints with JWT;
 - `players` module: internal player lookups used by auth;
 - `missions` module: list missions, list a mission's questions
-  (`GET /missions/:id/questions`, no correctness data), complete a mission, and
-  list the authenticated player's completed mission ids (`GET /missions/completed`).
-  Completion is transactional: a submission must contain exactly one answer for
-  every mission question, submitted answers are validated against the persisted
-  mission questions (duplicates, multiple answers per question, and out-of-mission
-  references are rejected), `correctCount` is derived exclusively from
-  `Answer.isCorrect`, the score is `correctCount * mission.points` persisted in
-  `Attempt.score`, and `Player.points` increases by the score. Reusing the same
-  mission more than once is prevented by `@@unique([playerId, missionId])` and the
-  `P2002` handling;
+  (`GET /missions/:id/questions`, no correctness data), start a gameplay
+  session (`POST /missions/:id/start` returns a `sessionId` with the public
+  question data while the correct answers stay server-side), submit a single
+  answer (`POST /missions/:id/answer` returns `{ isCorrect }` evaluated from
+  the session in Redis without a database query), complete a mission
+  (`POST /missions/:id/complete`, transactional), and list the authenticated
+  player's completed mission ids (`GET /missions/completed`). Completion
+  requires the `sessionId`; the session must exist, belong to the player, and
+  match the mission. A submission must contain exactly one answer for every
+  session question, validated against the session's questions (duplicates,
+  multiple answers per question, and out-of-session references are rejected).
+  `correctCount` is derived exclusively from the session's correct answers, the
+  score is `correctCount * mission.points` persisted in `Attempt.score`, and
+  `Player.points` increases by the score. Reusing the same mission more than
+  once is prevented by `@@unique([playerId, missionId])` and the `P2002`
+  handling. Realtime events are emitted and the session is deleted only after a
+  successful commit;
 - `ranking` module: all players ordered by points with deterministic
   tie-breaking;
 - shared HTTP contracts in the `contracts/` package used at the API boundary;
@@ -42,8 +49,9 @@ Implemented:
   with an expiry (`EX`), and `delete`. The client connects during startup and
   closes cleanly during shutdown. The connection URL and the default
   session-oriented TTL (600 seconds) come from configuration (`REDIS_URL`,
-  `REDIS_TTL_SECONDS`). No gameplay data is stored yet; this is the first step
-  toward temporary gameplay session state.
+  `REDIS_TTL_SECONDS`). Gameplay sessions are stored under `game-session:<uuid>`
+  keys by the missions module's `GameSessionService` and expire after the
+  configured TTL.
 
 ## Foundation Conventions
 
@@ -119,6 +127,10 @@ client directly from business modules.
 The Redis URL and the default session TTL come from the configuration layer
 (`REDIS_URL`, `REDIS_TTL_SECONDS`, default 600). Do not hardcode a TTL or a
 connection URL elsewhere.
+
+The missions module keeps temporary gameplay sessions in Redis through
+`GameSessionService`; a session is deleted once its mission completion commits,
+and expired sessions are treated as missing.
 
 PostgreSQL remains the source of truth: anything that must survive restarts
 belongs in the database, not in Redis.

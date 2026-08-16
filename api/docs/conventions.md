@@ -76,6 +76,11 @@ The `redis` infrastructure module (`src/infrastructure/redis/`) exposes
 `RedisService` with `get`, `set` (with an expiry), and `delete` only. Business
 modules must not create or use Redis clients directly.
 
+Gameplay sessions live under `game-session:<uuid>` keys and are handled by
+`GameSessionService` in the missions module, which persists them with the
+configured default TTL. A session is deleted once its mission completion
+commits; expired sessions are treated as missing.
+
 Redis is not the source of truth: data that must survive restarts belongs in
 PostgreSQL.
 
@@ -84,15 +89,28 @@ PostgreSQL.
 `GET /missions/:id/questions` exposes a mission's questions without any
 correctness information: the payload only carries question prompts and answer texts.
 
-`POST /missions/:id/complete` evaluates the submitted answers server-side.
-A submission must contain exactly one answer for every question of the mission:
-duplicate `questionId` values, multiple answers for the same question, answers
-referencing questions outside the mission, and answers that do not belong to
-their submitted question are rejected. Only after all validations pass are the
-answers evaluated. The correct count is derived exclusively from
-`Answer.isCorrect`. The score is `correctCount * mission.points`, stored in
-`Attempt.score`, and `Player.points` increases by the same amount. The mission
-timer is a frontend concern and is neither validated nor persisted by the API.
+`POST /missions/:id/start` creates a gameplay session in Redis
+(`GameSessionService`) and returns a `sessionId` together with the same public
+question/answer data. The correct answers are stored server-side inside the
+session and never leave the API.
+
+`POST /missions/:id/answer` returns `{ isCorrect }` for a single submitted
+answer, evaluated against the session's correct answers in Redis without a
+database query, and records the submission in the session (refreshing its TTL).
+
+`POST /missions/:id/complete` requires the `sessionId` and evaluates the
+submitted answers server-side. The session must exist, belong to the
+authenticated player, and reference the same mission. A submission must contain
+exactly one answer for every question of the session: duplicate `questionId`
+values, multiple answers for the same question, answers referencing questions
+outside the session, and answers that do not belong to their submitted question
+are rejected. The correct count is derived exclusively from the session's
+correct answers. The score is `correctCount * mission.points`, stored in
+`Attempt.score`, and `Player.points` increases by the same amount. The
+transaction also prevents double completion (`@@unique([playerId, missionId])`
+and `P2002` handling). On success the realtime events are emitted and the
+session is deleted from Redis. The mission timer is a frontend concern and is
+neither validated nor persisted by the API.
 
 ## Authentication
 

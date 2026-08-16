@@ -19,6 +19,9 @@ export type {
   MissionCompletion,
   MissionQuestion,
   MissionQuestionsResponse,
+  StartMissionResponse,
+  SubmitAnswerRequest,
+  SubmitAnswerResponse,
 } from "./mission.js";
 
 export type {

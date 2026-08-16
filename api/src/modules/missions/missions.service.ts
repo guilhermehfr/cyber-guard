@@ -4,10 +4,14 @@ import type {
   CompleteMissionResponse,
   Mission,
   MissionQuestionsResponse,
+  StartMissionResponse,
+  SubmitAnswerRequest,
+  SubmitAnswerResponse,
 } from "@cyber/contracts";
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -19,11 +23,15 @@ import { PrismaService } from "@/infrastructure/database/prisma.service.js";
 // biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { RealtimeGateway } from "@/modules/realtime/realtime.gateway.js";
 
+// biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
+import { GameSessionService } from "./game-session.service.js";
+
 @Injectable()
 export class MissionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimeGateway,
+    private readonly gameSessions: GameSessionService,
   ) {}
 
   async listMissions(): Promise<Mission[]> {
@@ -75,16 +83,138 @@ export class MissionsService {
     return { missionId: mission.id, questions: mission.questions };
   }
 
+  async startMission(playerId: string, missionId: string): Promise<StartMissionResponse> {
+    const mission = await this.prisma.mission.findUnique({
+      where: { id: missionId },
+      select: {
+        id: true,
+        questions: {
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            prompt: true,
+            answers: {
+              orderBy: { id: "asc" },
+              select: { id: true, text: true, isCorrect: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!mission) {
+      throw new NotFoundException("Mission not found");
+    }
+
+    const sessionId = await this.gameSessions.create({
+      playerId,
+      missionId: mission.id,
+      questions: mission.questions.map((question) => ({
+        questionId: question.id,
+        answerIds: question.answers.map((answer) => answer.id),
+        correctAnswerIds: question.answers
+          .filter((answer) => answer.isCorrect)
+          .map((answer) => answer.id),
+      })),
+    });
+
+    return {
+      sessionId,
+      missionId: mission.id,
+      questions: mission.questions.map((question) => ({
+        id: question.id,
+        prompt: question.prompt,
+        answers: question.answers.map(({ id, text }) => ({ id, text })),
+      })),
+    };
+  }
+
+  async submitAnswer(
+    playerId: string,
+    missionId: string,
+    dto: SubmitAnswerRequest,
+  ): Promise<SubmitAnswerResponse> {
+    const session = await this.gameSessions.get(dto.sessionId);
+    if (!session) {
+      throw new NotFoundException("Game session not found or expired");
+    }
+    if (session.playerId !== playerId) {
+      throw new ForbiddenException("Game session does not belong to this player");
+    }
+    if (session.missionId !== missionId) {
+      throw new BadRequestException("Game session does not match this mission");
+    }
+
+    const question = session.questions.find((item) => item.questionId === dto.questionId);
+    if (!question) {
+      throw new BadRequestException("Question does not belong to this mission");
+    }
+    if (!question.answerIds.includes(dto.answerId)) {
+      throw new BadRequestException("Answer does not belong to this question");
+    }
+
+    const recorded = session.answers.find((item) => item.questionId === dto.questionId);
+    if (recorded) {
+      recorded.answerId = dto.answerId;
+    } else {
+      session.answers.push({ questionId: dto.questionId, answerId: dto.answerId });
+    }
+
+    await this.gameSessions.save(session);
+
+    return { isCorrect: question.correctAnswerIds.includes(dto.answerId) };
+  }
+
   async completeMission(
     playerId: string,
     missionId: string,
+    sessionId: string,
     answers: CompleteMissionRequest["answers"],
   ): Promise<CompleteMissionResponse> {
+    const session = await this.gameSessions.get(sessionId);
+    if (!session) {
+      throw new NotFoundException("Game session not found or expired");
+    }
+    if (session.playerId !== playerId) {
+      throw new ForbiddenException("Game session does not belong to this player");
+    }
+    if (session.missionId !== missionId) {
+      throw new BadRequestException("Game session does not match this mission");
+    }
+
+    const questionsById = new Map(
+      session.questions.map((question) => [question.questionId, question]),
+    );
+
+    if (answers.length !== session.questions.length) {
+      throw new BadRequestException("Must submit exactly one answer per question");
+    }
+
+    const seenQuestions = new Set<string>();
+    for (const submitted of answers) {
+      const question = questionsById.get(submitted.questionId);
+      if (!question) {
+        throw new BadRequestException("Question does not belong to this mission");
+      }
+      if (seenQuestions.has(submitted.questionId)) {
+        throw new BadRequestException("Multiple answers submitted for the same question");
+      }
+      seenQuestions.add(submitted.questionId);
+
+      if (!question.answerIds.includes(submitted.answerId)) {
+        throw new BadRequestException("Answer does not belong to this question");
+      }
+    }
+
+    const correctCount = answers.filter((submitted) =>
+      questionsById.get(submitted.questionId)?.correctAnswerIds.includes(submitted.answerId),
+    ).length;
+
     try {
       const result = await this.prisma.$transaction(async (tx) => {
         const mission = await tx.mission.findUnique({
           where: { id: missionId },
-          include: { questions: { include: { answers: true } } },
+          select: { points: true },
         });
         if (!mission) {
           throw new NotFoundException("Mission not found");
@@ -97,42 +227,7 @@ export class MissionsService {
           throw new ConflictException("Mission already completed");
         }
 
-        const questionsById = new Map(mission.questions.map((question) => [question.id, question]));
-        const answersByQuestion = new Map(
-          mission.questions.map((question) => [
-            question.id,
-            new Map(question.answers.map((answer) => [answer.id, answer])),
-          ]),
-        );
-
-        if (answers.length !== mission.questions.length) {
-          throw new BadRequestException("Must submit exactly one answer per question");
-        }
-
-        const seenQuestions = new Set<string>();
-        for (const submitted of answers) {
-          if (!questionsById.has(submitted.questionId)) {
-            throw new BadRequestException("Question does not belong to this mission");
-          }
-          if (seenQuestions.has(submitted.questionId)) {
-            throw new BadRequestException("Multiple answers submitted for the same question");
-          }
-          seenQuestions.add(submitted.questionId);
-
-          const questionAnswers = answersByQuestion.get(submitted.questionId);
-          if (!questionAnswers?.has(submitted.answerId)) {
-            throw new BadRequestException("Answer does not belong to this question");
-          }
-        }
-
-        let correctCount = 0;
-        for (const submitted of answers) {
-          if (answersByQuestion.get(submitted.questionId)?.get(submitted.answerId)?.isCorrect) {
-            correctCount += 1;
-          }
-        }
-
-        const totalQuestions = mission.questions.length;
+        const totalQuestions = session.questions.length;
         const score = correctCount * mission.points;
 
         const completion = await tx.attempt.create({
@@ -157,6 +252,7 @@ export class MissionsService {
         };
       });
 
+      await this.gameSessions.delete(sessionId);
       this.realtime.emitRankingUpdated();
       this.realtime.emitPlayerScoreUpdated(playerId, result.playerPoints);
 

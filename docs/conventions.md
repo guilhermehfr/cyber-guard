@@ -119,7 +119,8 @@ Avoid introducing microservices, brokers, or additional infrastructure without a
 
 Redis is reserved for temporary, session-oriented state (gameplay sessions). It is
 accessed only through the API's `redis` infrastructure module; PostgreSQL remains
-the persistent source of truth.
+the persistent source of truth. The missions module keeps gameplay sessions in
+Redis with the configured TTL and deletes them after a successful completion.
 
 ## Code Quality
 

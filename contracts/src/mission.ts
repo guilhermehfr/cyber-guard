@@ -32,7 +32,24 @@ export interface MissionQuestionsResponse {
   questions: MissionQuestion[];
 }
 
+export interface StartMissionResponse {
+  sessionId: string;
+  missionId: string;
+  questions: MissionQuestion[];
+}
+
+export interface SubmitAnswerRequest {
+  sessionId: string;
+  questionId: string;
+  answerId: string;
+}
+
+export interface SubmitAnswerResponse {
+  isCorrect: boolean;
+}
+
 export interface CompleteMissionRequest {
+  sessionId: string;
   answers: Array<{
     questionId: string;
     answerId: string;

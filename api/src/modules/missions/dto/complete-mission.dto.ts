@@ -13,6 +13,10 @@ export class SubmittedAnswerDto {
 }
 
 export class CompleteMissionDto implements CompleteMissionRequest {
+  @IsString()
+  @IsNotEmpty()
+  sessionId!: string;
+
   @IsArray()
   @ArrayNotEmpty()
   @ValidateNested({ each: true })

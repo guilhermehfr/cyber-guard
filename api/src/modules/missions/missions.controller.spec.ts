@@ -45,7 +45,7 @@ describe("MissionsController", () => {
   });
 
   describe("complete", () => {
-    it("passes the player id, mission id and submitted answers to the service", async () => {
+    it("passes the player id, mission id, session id and submitted answers to the service", async () => {
       const { controller, completeMission } = createController();
       completeMission.mockResolvedValue({
         completion: {
@@ -60,6 +60,7 @@ describe("MissionsController", () => {
       });
       const request = { user: { id: "player-1" } as AuthenticatedUser };
       const dto = {
+        sessionId: "session-1",
         answers: [
           { questionId: "question-1", answerId: "answer-1" },
           { questionId: "question-2", answerId: "answer-2" },
@@ -68,7 +69,12 @@ describe("MissionsController", () => {
 
       const result = await controller.complete("mission-1", dto, request);
 
-      expect(completeMission).toHaveBeenCalledWith("player-1", "mission-1", dto.answers);
+      expect(completeMission).toHaveBeenCalledWith(
+        "player-1",
+        "mission-1",
+        "session-1",
+        dto.answers,
+      );
       expect(result).toEqual({
         completion: {
           id: "attempt-1",

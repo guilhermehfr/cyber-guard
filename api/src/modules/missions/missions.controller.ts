@@ -4,6 +4,8 @@ import type {
   CompleteMissionResponse,
   Mission,
   MissionQuestionsResponse,
+  StartMissionResponse,
+  SubmitAnswerResponse,
 } from "@cyber/contracts";
 import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
 
@@ -11,6 +13,8 @@ import { JwtAuthGuard } from "@/modules/auth/guards/jwt-auth.guard.js";
 
 // biome-ignore lint/style/useImportType: NestJS validation uses the runtime metatype.
 import { CompleteMissionDto } from "./dto/complete-mission.dto.js";
+// biome-ignore lint/style/useImportType: NestJS validation uses the runtime metatype.
+import { SubmitAnswerDto } from "./dto/submit-answer.dto.js";
 // biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { MissionsService } from "./missions.service.js";
 
@@ -36,12 +40,36 @@ export class MissionsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post(":id/start")
+  start(
+    @Param("id") missionId: string,
+    @Req() request: { user: AuthenticatedUser },
+  ): Promise<StartMissionResponse> {
+    return this.missionsService.startMission(request.user.id, missionId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(":id/answer")
+  answer(
+    @Param("id") missionId: string,
+    @Body() dto: SubmitAnswerDto,
+    @Req() request: { user: AuthenticatedUser },
+  ): Promise<SubmitAnswerResponse> {
+    return this.missionsService.submitAnswer(request.user.id, missionId, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post(":id/complete")
   complete(
     @Param("id") missionId: string,
     @Body() dto: CompleteMissionDto,
     @Req() request: { user: AuthenticatedUser },
   ): Promise<CompleteMissionResponse> {
-    return this.missionsService.completeMission(request.user.id, missionId, dto.answers);
+    return this.missionsService.completeMission(
+      request.user.id,
+      missionId,
+      dto.sessionId,
+      dto.answers,
+    );
   }
 }

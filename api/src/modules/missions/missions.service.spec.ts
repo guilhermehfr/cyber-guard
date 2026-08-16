@@ -1,10 +1,16 @@
-import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common";
 import { type Attempt, type Mission, Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "@/infrastructure/database/prisma.service.js";
 import type { RealtimeGateway } from "@/modules/realtime/realtime.gateway.js";
 
+import type { GameSession, GameSessionService } from "./game-session.service.js";
 import { MissionsService } from "./missions.service.js";
 
 const sampleMission: Mission = {
@@ -62,8 +68,6 @@ const sampleQuestions = [
   },
 ];
 
-const missionWithQuestions = { ...sampleMission, questions: sampleQuestions };
-
 const sampleCompletion: Attempt = {
   id: "clattempt000000000001",
   playerId: "player-1",
@@ -81,6 +85,23 @@ const updatedPlayer = {
   createdAt: new Date("2026-08-14T12:00:00.000Z"),
   updatedAt: new Date("2026-08-14T12:05:00.000Z"),
 };
+
+function createSampleSession(overrides: Partial<GameSession> = {}): GameSession {
+  return {
+    sessionId: "session-1",
+    playerId: "player-1",
+    missionId: sampleMission.id,
+    questions: sampleQuestions.map((question) => ({
+      questionId: question.id,
+      answerIds: question.answers.map((answer) => answer.id),
+      correctAnswerIds: question.answers
+        .filter((answer) => answer.isCorrect)
+        .map((answer) => answer.id),
+    })),
+    answers: [],
+    ...overrides,
+  };
+}
 
 function createMocks() {
   const missionModel = { findMany: vi.fn(), findUnique: vi.fn() };
@@ -101,11 +122,18 @@ function createMocks() {
     emitPlayerScoreUpdated: vi.fn(),
   } as unknown as RealtimeGateway;
 
-  return { prisma, missionModel, attemptModel, playerModel, realtime };
+  const gameSessions = {
+    create: vi.fn(),
+    get: vi.fn(),
+    save: vi.fn(),
+    delete: vi.fn(),
+  } as unknown as GameSessionService;
+
+  return { prisma, missionModel, attemptModel, playerModel, realtime, gameSessions };
 }
 
 function createService(mocks: ReturnType<typeof createMocks>): MissionsService {
-  return new MissionsService(mocks.prisma, mocks.realtime);
+  return new MissionsService(mocks.prisma, mocks.realtime, mocks.gameSessions);
 }
 
 describe("MissionsService", () => {
@@ -164,7 +192,50 @@ describe("MissionsService", () => {
           },
         },
       });
+      expect(JSON.stringify(result)).not.toContain("isCorrect");
+    });
+
+    it("throws NotFoundException when the mission does not exist", async () => {
+      const mocks = createMocks();
+      mocks.missionModel.findUnique.mockResolvedValue(null);
+      const service = createService(mocks);
+
+      await expect(service.getMissionQuestions("missing-mission")).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe("startMission", () => {
+    it("returns a session id and the public questions without exposing correctness", async () => {
+      const mocks = createMocks();
+      mocks.missionModel.findUnique.mockResolvedValue({
+        id: sampleMission.id,
+        questions: sampleQuestions,
+      });
+      mocks.gameSessions.create.mockResolvedValue("session-1");
+      const service = createService(mocks);
+
+      const result = await service.startMission("player-1", sampleMission.id);
+
+      expect(mocks.gameSessions.create).toHaveBeenCalledWith({
+        playerId: "player-1",
+        missionId: sampleMission.id,
+        questions: [
+          {
+            questionId: "clquestion000000000001",
+            answerIds: ["clanswer000000000001", "clanswer000000000002"],
+            correctAnswerIds: ["clanswer000000000001"],
+          },
+          {
+            questionId: "clquestion000000000002",
+            answerIds: ["clanswer000000000003", "clanswer000000000004"],
+            correctAnswerIds: ["clanswer000000000003"],
+          },
+        ],
+      });
       expect(result).toEqual({
+        sessionId: "session-1",
         missionId: sampleMission.id,
         questions: [
           {
@@ -186,6 +257,7 @@ describe("MissionsService", () => {
         ],
       });
       expect(JSON.stringify(result)).not.toContain("isCorrect");
+      expect(JSON.stringify(result)).not.toContain("correctAnswerIds");
     });
 
     it("throws NotFoundException when the mission does not exist", async () => {
@@ -193,36 +265,147 @@ describe("MissionsService", () => {
       mocks.missionModel.findUnique.mockResolvedValue(null);
       const service = createService(mocks);
 
-      await expect(service.getMissionQuestions("missing-mission")).rejects.toBeInstanceOf(
+      await expect(service.startMission("player-1", "missing-mission")).rejects.toBeInstanceOf(
         NotFoundException,
       );
+      expect(mocks.gameSessions.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("submitAnswer", () => {
+    it("returns isCorrect from the session without querying the database and records the answer", async () => {
+      const mocks = createMocks();
+      mocks.gameSessions.get.mockResolvedValue(createSampleSession());
+      const service = createService(mocks);
+
+      const correct = await service.submitAnswer("player-1", sampleMission.id, {
+        sessionId: "session-1",
+        questionId: "clquestion000000000001",
+        answerId: "clanswer000000000001",
+      });
+      const wrong = await service.submitAnswer("player-1", sampleMission.id, {
+        sessionId: "session-1",
+        questionId: "clquestion000000000001",
+        answerId: "clanswer000000000002",
+      });
+
+      expect(correct).toEqual({ isCorrect: true });
+      expect(wrong).toEqual({ isCorrect: false });
+      expect(mocks.missionModel.findUnique).not.toHaveBeenCalled();
+      expect(mocks.attemptModel.findUnique).not.toHaveBeenCalled();
+      expect(mocks.playerModel.update).not.toHaveBeenCalled();
+      expect(mocks.gameSessions.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          answers: [{ questionId: "clquestion000000000001", answerId: "clanswer000000000002" }],
+        }),
+      );
+    });
+
+    it("throws NotFoundException when the session is missing or expired", async () => {
+      const mocks = createMocks();
+      mocks.gameSessions.get.mockResolvedValue(null);
+      const service = createService(mocks);
+
+      await expect(
+        service.submitAnswer("player-1", sampleMission.id, {
+          sessionId: "session-1",
+          questionId: "clquestion000000000001",
+          answerId: "clanswer000000000001",
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(mocks.gameSessions.save).not.toHaveBeenCalled();
+    });
+
+    it("rejects a session or submission that is not valid for this player and mission", async () => {
+      const mocks = createMocks();
+      const service = createService(mocks);
+      const base = {
+        sessionId: "session-1",
+        questionId: "clquestion000000000001",
+        answerId: "clanswer000000000001",
+      };
+
+      mocks.gameSessions.get.mockResolvedValue(createSampleSession({ playerId: "player-2" }));
+      await expect(service.submitAnswer("player-1", sampleMission.id, base)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+
+      mocks.gameSessions.get.mockResolvedValue(createSampleSession({ missionId: "other-mission" }));
+      await expect(service.submitAnswer("player-1", sampleMission.id, base)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+
+      mocks.gameSessions.get.mockResolvedValue(createSampleSession());
+      await expect(
+        service.submitAnswer("player-1", sampleMission.id, {
+          ...base,
+          questionId: "foreign-question",
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        service.submitAnswer("player-1", sampleMission.id, { ...base, answerId: "foreign-answer" }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(mocks.gameSessions.save).not.toHaveBeenCalled();
     });
   });
 
   describe("completeMission", () => {
-    it("throws NotFoundException when the mission does not exist", async () => {
+    const completeAnswers = [
+      { questionId: "clquestion000000000001", answerId: "clanswer000000000001" },
+      { questionId: "clquestion000000000002", answerId: "clanswer000000000003" },
+    ];
+
+    it("throws when the session is missing, owned by another player, or bound to another mission", async () => {
       const mocks = createMocks();
-      mocks.missionModel.findUnique.mockResolvedValue(null);
       const service = createService(mocks);
 
+      mocks.gameSessions.get.mockResolvedValue(null);
       await expect(
-        service.completeMission("player-1", "missing-mission", []),
+        service.completeMission("player-1", sampleMission.id, "session-1", completeAnswers),
       ).rejects.toBeInstanceOf(NotFoundException);
+
+      mocks.gameSessions.get.mockResolvedValue(createSampleSession({ playerId: "player-2" }));
+      await expect(
+        service.completeMission("player-1", sampleMission.id, "session-1", completeAnswers),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      mocks.gameSessions.get.mockResolvedValue(createSampleSession({ missionId: "other-mission" }));
+      await expect(
+        service.completeMission("player-1", sampleMission.id, "session-1", completeAnswers),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
       expect(mocks.attemptModel.create).not.toHaveBeenCalled();
-      expect(mocks.playerModel.update).not.toHaveBeenCalled();
+      expect(mocks.gameSessions.delete).not.toHaveBeenCalled();
       expect(mocks.realtime.emitRankingUpdated).not.toHaveBeenCalled();
       expect(mocks.realtime.emitPlayerScoreUpdated).not.toHaveBeenCalled();
     });
 
-    it("completes the mission and awards points per correct answer", async () => {
+    it("throws NotFoundException when the mission does not exist", async () => {
       const mocks = createMocks();
-      mocks.missionModel.findUnique.mockResolvedValue(missionWithQuestions);
+      mocks.gameSessions.get.mockResolvedValue(createSampleSession());
+      mocks.missionModel.findUnique.mockResolvedValue(null);
+      const service = createService(mocks);
+
+      await expect(
+        service.completeMission("player-1", sampleMission.id, "session-1", completeAnswers),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(mocks.attemptModel.create).not.toHaveBeenCalled();
+      expect(mocks.playerModel.update).not.toHaveBeenCalled();
+      expect(mocks.gameSessions.delete).not.toHaveBeenCalled();
+      expect(mocks.realtime.emitRankingUpdated).not.toHaveBeenCalled();
+    });
+
+    it("completes the mission, awards points from the session's correct data, deletes the session and emits events", async () => {
+      const mocks = createMocks();
+      mocks.gameSessions.get.mockResolvedValue(createSampleSession());
+      mocks.missionModel.findUnique.mockResolvedValue({ points: sampleMission.points });
       mocks.attemptModel.findUnique.mockResolvedValue(null);
       mocks.attemptModel.create.mockResolvedValue(sampleCompletion);
       mocks.playerModel.update.mockResolvedValue(updatedPlayer);
       const service = createService(mocks);
 
-      const result = await service.completeMission("player-1", sampleMission.id, [
+      const result = await service.completeMission("player-1", sampleMission.id, "session-1", [
         { questionId: "clquestion000000000001", answerId: "clanswer000000000001" },
         { questionId: "clquestion000000000002", answerId: "clanswer000000000004" },
       ]);
@@ -245,176 +428,76 @@ describe("MissionsService", () => {
         pointsAwarded: 50,
         playerPoints: 150,
       });
+      expect(mocks.gameSessions.delete).toHaveBeenCalledWith("session-1");
       expect(mocks.realtime.emitRankingUpdated).toHaveBeenCalledOnce();
       expect(mocks.realtime.emitPlayerScoreUpdated).toHaveBeenCalledWith("player-1", 150);
     });
 
-    it("counts correct answers exclusively from Answer.isCorrect", async () => {
+    it("rejects malformed submissions", async () => {
       const mocks = createMocks();
-      mocks.missionModel.findUnique.mockResolvedValue(missionWithQuestions);
-      mocks.attemptModel.findUnique.mockResolvedValue(null);
-      mocks.attemptModel.create.mockResolvedValue({ ...sampleCompletion, score: 100 });
-      mocks.playerModel.update.mockResolvedValue({ ...updatedPlayer, points: 200 });
-      const service = createService(mocks);
-
-      const result = await service.completeMission("player-1", sampleMission.id, [
-        { questionId: "clquestion000000000001", answerId: "clanswer000000000001" },
-        { questionId: "clquestion000000000002", answerId: "clanswer000000000003" },
-      ]);
-
-      expect(result.correctCount).toBe(2);
-      expect(result.totalQuestions).toBe(2);
-      expect(result.pointsAwarded).toBe(100);
-      expect(mocks.attemptModel.create).toHaveBeenCalledWith({
-        data: { playerId: "player-1", missionId: sampleMission.id, score: 100 },
-      });
-      expect(mocks.playerModel.update).toHaveBeenCalledWith({
-        where: { id: "player-1" },
-        data: { points: { increment: 100 } },
-      });
-    });
-
-    it("persists a zero score when no answer is correct", async () => {
-      const mocks = createMocks();
-      mocks.missionModel.findUnique.mockResolvedValue(missionWithQuestions);
-      mocks.attemptModel.findUnique.mockResolvedValue(null);
-      mocks.attemptModel.create.mockResolvedValue({ ...sampleCompletion, score: 0 });
-      mocks.playerModel.update.mockResolvedValue({ ...updatedPlayer, points: 100 });
-      const service = createService(mocks);
-
-      const result = await service.completeMission("player-1", sampleMission.id, [
-        { questionId: "clquestion000000000001", answerId: "clanswer000000000002" },
-        { questionId: "clquestion000000000002", answerId: "clanswer000000000004" },
-      ]);
-
-      expect(result.correctCount).toBe(0);
-      expect(result.pointsAwarded).toBe(0);
-      expect(mocks.attemptModel.create).toHaveBeenCalledWith({
-        data: { playerId: "player-1", missionId: sampleMission.id, score: 0 },
-      });
-      expect(mocks.playerModel.update).toHaveBeenCalledWith({
-        where: { id: "player-1" },
-        data: { points: { increment: 0 } },
-      });
-    });
-
-    it("rejects an answer that belongs to another question", async () => {
-      const mocks = createMocks();
-      mocks.missionModel.findUnique.mockResolvedValue(missionWithQuestions);
-      mocks.attemptModel.findUnique.mockResolvedValue(null);
+      mocks.gameSessions.get.mockResolvedValue(createSampleSession());
       const service = createService(mocks);
 
       await expect(
-        service.completeMission("player-1", sampleMission.id, [
+        service.completeMission("player-1", sampleMission.id, "session-1", [
+          { questionId: "foreign-question", answerId: "clanswer000000000001" },
+          { questionId: "clquestion000000000002", answerId: "clanswer000000000003" },
+        ]),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        service.completeMission("player-1", sampleMission.id, "session-1", [
           { questionId: "clquestion000000000001", answerId: "clanswer000000000003" },
           { questionId: "clquestion000000000002", answerId: "clanswer000000000004" },
         ]),
       ).rejects.toBeInstanceOf(BadRequestException);
-      expect(mocks.attemptModel.create).not.toHaveBeenCalled();
-      expect(mocks.playerModel.update).not.toHaveBeenCalled();
-    });
-
-    it("rejects a question that does not belong to the mission", async () => {
-      const mocks = createMocks();
-      mocks.missionModel.findUnique.mockResolvedValue(missionWithQuestions);
-      mocks.attemptModel.findUnique.mockResolvedValue(null);
-      const service = createService(mocks);
-
       await expect(
-        service.completeMission("player-1", sampleMission.id, [
-          { questionId: "foreign-question", answerId: "clanswer000000000001" },
-          { questionId: "clquestion000000000002", answerId: "clanswer000000000004" },
-        ]),
-      ).rejects.toBeInstanceOf(BadRequestException);
-      expect(mocks.attemptModel.create).not.toHaveBeenCalled();
-      expect(mocks.playerModel.update).not.toHaveBeenCalled();
-    });
-
-    it("rejects a submission that does not cover every question", async () => {
-      const mocks = createMocks();
-      mocks.missionModel.findUnique.mockResolvedValue(missionWithQuestions);
-      mocks.attemptModel.findUnique.mockResolvedValue(null);
-      const service = createService(mocks);
-
-      await expect(
-        service.completeMission("player-1", sampleMission.id, [
+        service.completeMission("player-1", sampleMission.id, "session-1", [
           { questionId: "clquestion000000000001", answerId: "clanswer000000000001" },
         ]),
       ).rejects.toBeInstanceOf(BadRequestException);
-      expect(mocks.attemptModel.create).not.toHaveBeenCalled();
-      expect(mocks.playerModel.update).not.toHaveBeenCalled();
-    });
-
-    it("rejects a submission with more answers than questions", async () => {
-      const mocks = createMocks();
-      mocks.missionModel.findUnique.mockResolvedValue(missionWithQuestions);
-      mocks.attemptModel.findUnique.mockResolvedValue(null);
-      const service = createService(mocks);
-
       await expect(
-        service.completeMission("player-1", sampleMission.id, [
-          { questionId: "clquestion000000000001", answerId: "clanswer000000000001" },
-          { questionId: "clquestion000000000002", answerId: "clanswer000000000003" },
+        service.completeMission("player-1", sampleMission.id, "session-1", [
+          ...completeAnswers,
           { questionId: "clquestion000000000001", answerId: "clanswer000000000002" },
         ]),
       ).rejects.toBeInstanceOf(BadRequestException);
-      expect(mocks.attemptModel.create).not.toHaveBeenCalled();
-      expect(mocks.playerModel.update).not.toHaveBeenCalled();
-    });
-
-    it("rejects multiple answers submitted for the same question", async () => {
-      const mocks = createMocks();
-      mocks.missionModel.findUnique.mockResolvedValue(missionWithQuestions);
-      mocks.attemptModel.findUnique.mockResolvedValue(null);
-      const service = createService(mocks);
-
       await expect(
-        service.completeMission("player-1", sampleMission.id, [
+        service.completeMission("player-1", sampleMission.id, "session-1", [
           { questionId: "clquestion000000000001", answerId: "clanswer000000000001" },
           { questionId: "clquestion000000000001", answerId: "clanswer000000000002" },
           { questionId: "clquestion000000000002", answerId: "clanswer000000000003" },
         ]),
       ).rejects.toBeInstanceOf(BadRequestException);
+
       expect(mocks.attemptModel.create).not.toHaveBeenCalled();
       expect(mocks.playerModel.update).not.toHaveBeenCalled();
+      expect(mocks.gameSessions.delete).not.toHaveBeenCalled();
     });
 
-    it("rejects completing a mission that was already completed", async () => {
+    it("rejects a duplicate completion, whether already recorded or under a concurrent race", async () => {
       const mocks = createMocks();
-      mocks.missionModel.findUnique.mockResolvedValue(missionWithQuestions);
+      mocks.gameSessions.get.mockResolvedValue(createSampleSession());
+      mocks.missionModel.findUnique.mockResolvedValue({ points: sampleMission.points });
       mocks.attemptModel.findUnique.mockResolvedValue(sampleCompletion);
       const service = createService(mocks);
 
       await expect(
-        service.completeMission("player-1", sampleMission.id, [
-          { questionId: "clquestion000000000001", answerId: "clanswer000000000001" },
-          { questionId: "clquestion000000000002", answerId: "clanswer000000000003" },
-        ]),
+        service.completeMission("player-1", sampleMission.id, "session-1", completeAnswers),
       ).rejects.toBeInstanceOf(ConflictException);
-      expect(mocks.attemptModel.create).not.toHaveBeenCalled();
-      expect(mocks.playerModel.update).not.toHaveBeenCalled();
+      expect(mocks.gameSessions.delete).not.toHaveBeenCalled();
       expect(mocks.realtime.emitRankingUpdated).not.toHaveBeenCalled();
-      expect(mocks.realtime.emitPlayerScoreUpdated).not.toHaveBeenCalled();
-    });
 
-    it("rejects a duplicate completion under a concurrent race", async () => {
-      const mocks = createMocks();
-      mocks.missionModel.findUnique.mockResolvedValue(missionWithQuestions);
       mocks.attemptModel.findUnique.mockResolvedValue(null);
       const uniqueViolation = new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
         code: "P2002",
         clientVersion: "7.9.1",
       });
       mocks.attemptModel.create.mockRejectedValue(uniqueViolation);
-      const service = createService(mocks);
-
       await expect(
-        service.completeMission("player-1", sampleMission.id, [
-          { questionId: "clquestion000000000001", answerId: "clanswer000000000001" },
-          { questionId: "clquestion000000000002", answerId: "clanswer000000000003" },
-        ]),
+        service.completeMission("player-1", sampleMission.id, "session-1", completeAnswers),
       ).rejects.toBeInstanceOf(ConflictException);
       expect(mocks.playerModel.update).not.toHaveBeenCalled();
+      expect(mocks.gameSessions.delete).not.toHaveBeenCalled();
       expect(mocks.realtime.emitRankingUpdated).not.toHaveBeenCalled();
       expect(mocks.realtime.emitPlayerScoreUpdated).not.toHaveBeenCalled();
     });
