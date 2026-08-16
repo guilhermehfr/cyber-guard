@@ -30,7 +30,7 @@ function createService(mocks: ReturnType<typeof createMocks>): RankingService {
 }
 
 describe("RankingService", () => {
-  it("orders players by points descending and limits the query to ten", async () => {
+  it("orders players by points descending without a limit", async () => {
     const mocks = createMocks();
     mocks.findMany.mockResolvedValue([
       playerRow("p1", "Ada", 300, "2026-08-01T00:00:00.000Z"),
@@ -44,12 +44,11 @@ describe("RankingService", () => {
     expect(mocks.findMany).toHaveBeenCalledWith({
       select: { id: true, name: true, points: true },
       orderBy: [{ points: "desc" }, { createdAt: "asc" }, { id: "asc" }],
-      take: 10,
     });
     expect(result.entries.map((entry) => entry.points)).toEqual([300, 200, 150]);
   });
 
-  it("returns only the top ten players with positions starting at one", async () => {
+  it("returns all players with positions starting at one", async () => {
     const mocks = createMocks();
     const rows = Array.from({ length: 10 }, (_, index) =>
       playerRow(`p${index}`, `Player ${index}`, 100 - index, "2026-08-01T00:00:00.000Z"),
@@ -145,11 +144,12 @@ describe("RankingService", () => {
     expect(result.currentPlayer).toEqual({ position: 2, id: "p2", points: 200 });
   });
 
-  it("computes the correct position when the player is outside the top ten", async () => {
+  it("includes players beyond the former top ten in the entries", async () => {
     const mocks = createMocks();
     const rows = Array.from({ length: 10 }, (_, index) =>
       playerRow(`p${index}`, `Player ${index}`, 100 - index, "2026-08-01T00:00:00.000Z"),
     );
+    rows.push(playerRow("p27", "Player 27", 40, "2026-08-05T00:00:00.000Z"));
     mocks.findMany.mockResolvedValue(rows);
     mocks.findUnique.mockResolvedValue({
       id: "p27",
@@ -161,8 +161,14 @@ describe("RankingService", () => {
 
     const result = await service.getTopPlayers("p27");
 
-    expect(result.entries).toHaveLength(10);
-    expect(result.entries.some((entry) => entry.id === "p27")).toBe(false);
+    expect(result.entries).toHaveLength(11);
+    expect(result.entries.some((entry) => entry.id === "p27")).toBe(true);
+    expect(result.entries[10]).toEqual({
+      position: 11,
+      id: "p27",
+      name: "Player 27",
+      points: 40,
+    });
     expect(result.currentPlayer).toEqual({ position: 27, id: "p27", points: 40 });
   });
 

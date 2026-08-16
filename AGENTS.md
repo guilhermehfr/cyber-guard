@@ -45,6 +45,7 @@ The main stack is:
 * React
 * PostgreSQL
 * Prisma
+* Redis
 * Docker
 * WebSockets
 * Biome

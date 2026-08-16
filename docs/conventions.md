@@ -73,9 +73,9 @@ frontend origins. `WEB_URL` accepts a comma-separated list of origins (used in
 development to support multiple frontend ports). Never use `*` or hardcode CORS
 origins or API URLs in code.
 
-Docker Compose manages the full stack (PostgreSQL, API, web) from the repository
-root. Containers start in dependency order: the API waits for a healthy PostgreSQL,
-and the web application waits for a healthy API.
+Docker Compose manages the full stack (PostgreSQL, Redis, API, web) from the
+repository root. Containers start in dependency order: the API waits for healthy
+PostgreSQL and Redis, and the web application waits for a healthy API.
 
 ## Communication
 
@@ -115,7 +115,11 @@ Favor simple, explicit solutions.
 
 Avoid premature abstraction.
 
-Avoid introducing microservices, brokers, Redis, or additional infrastructure without a concrete requirement.
+Avoid introducing microservices, brokers, or additional infrastructure without a concrete requirement.
+
+Redis is reserved for temporary, session-oriented state (gameplay sessions). It is
+accessed only through the API's `redis` infrastructure module; PostgreSQL remains
+the persistent source of truth.
 
 ## Code Quality
 

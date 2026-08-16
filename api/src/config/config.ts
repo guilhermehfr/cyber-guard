@@ -7,6 +7,10 @@ export interface AppConfig {
   database: {
     url: string;
   };
+  redis: {
+    url: string;
+    ttlSeconds: number;
+  };
   jwt: {
     secret: string;
     expiresIn: string;
@@ -37,6 +41,10 @@ export const configuration = (): AppConfig => ({
   },
   database: {
     url: getEnv("DATABASE_URL"),
+  },
+  redis: {
+    url: getEnv("REDIS_URL"),
+    ttlSeconds: Number(getEnv("REDIS_TTL_SECONDS")),
   },
   jwt: {
     secret: getEnv("JWT_SECRET"),

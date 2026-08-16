@@ -12,7 +12,6 @@ export class RankingService {
     const players = await this.prisma.player.findMany({
       select: { id: true, name: true, points: true },
       orderBy: [{ points: "desc" }, { createdAt: "asc" }, { id: "asc" }],
-      take: 10,
     });
 
     const entries = players.map((player, index) => ({

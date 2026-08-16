@@ -23,6 +23,12 @@ export const envValidationSchema = Joi.object({
 
   DATABASE_URL: Joi.string().required(),
 
+  REDIS_URL: Joi.string()
+    .uri({ scheme: ["redis", "rediss"] })
+    .required(),
+
+  REDIS_TTL_SECONDS: Joi.number().integer().min(1).default(600),
+
   JWT_SECRET: Joi.string().min(32).required(),
 
   JWT_EXPIRES_IN: Joi.string().default("1d"),

@@ -101,7 +101,7 @@ Os arquivos de ambiente são escolhidos conforme o `NODE_ENV`:
 
 ## Docker
 
-A stack completa (PostgreSQL + API + Web) é gerenciada pelo `docker-compose.yml` da raiz:
+A stack completa (PostgreSQL + Redis + API + Web) é gerenciada pelo `docker-compose.yml` da raiz:
 
 ```sh
 pnpm docker:up      # sobe a stack em detached
@@ -111,9 +111,14 @@ pnpm docker:reset   # remove containers, volume, imagens e rede
 
 - API exposta em `http://localhost:3000`.
 - PostgreSQL exposto em `localhost:5432` apenas para depuração local.
+- Redis exposto em `localhost:6379` apenas para depuração local.
 - Dados do PostgreSQL persistentes no volume nomeado `pgdata`.
-- A API só inicia após o healthcheck do PostgreSQL responder.
+- Dados do Redis persistentes no volume nomeado `redisdata` (AOF).
+- A API só inicia após os healthchecks do PostgreSQL e do Redis responderem.
 - A API possui healthcheck próprio (`GET /`); a Web só inicia após a API ficar saudável.
+- Para rebuilds, reconstrua apenas o serviço alterado (`docker compose up -d --build api` ou
+  `... --build web`). Ao reconstruir a stack inteira, serialize os builds com
+  `COMPOSE_PARALLEL_LIMIT=1` para reduzir o pico de memória da build no WSL.
 - No primeiro início (ou após `docker:reset`), o entrypoint aplica as migrations e executa
   o seed automaticamente (`prisma migrate deploy` + `prisma db seed`), tornando a stack
   auto-suficiente em banco vazio.

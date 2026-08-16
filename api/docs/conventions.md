@@ -66,6 +66,19 @@ Use database constraints to enforce integrity where appropriate.
 
 For example, mission completion must prevent the same player from completing the same mission more than once.
 
+## Redis
+
+Redis is used for temporary, session-oriented state (temporary gameplay session
+state). The connection and TTL configuration live in the centralized config
+(`REDIS_URL`, `REDIS_TTL_SECONDS`, default 600 seconds).
+
+The `redis` infrastructure module (`src/infrastructure/redis/`) exposes
+`RedisService` with `get`, `set` (with an expiry), and `delete` only. Business
+modules must not create or use Redis clients directly.
+
+Redis is not the source of truth: data that must survive restarts belongs in
+PostgreSQL.
+
 ## Missions
 
 `GET /missions/:id/questions` exposes a mission's questions without any

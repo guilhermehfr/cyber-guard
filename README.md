@@ -86,7 +86,7 @@ O seed é idempotente, serve apenas para desenvolvimento e não roda em produç�
 
 ### Com Docker
 
-Suba a stack completa (PostgreSQL + API + Web):
+Suba a stack completa (PostgreSQL + Redis + API + Web):
 
 ```sh
 pnpm docker:up
@@ -97,9 +97,14 @@ pnpm docker:reset    # remove containers, volume, imagens e rede
 - API: http://localhost:3000
 - Web: http://localhost:3001
 - PostgreSQL: localhost:5432 (somente para depuração local)
+- Redis: localhost:6379 (somente para depuração local)
 
 A Web só inicia depois que a API responde ao healthcheck; a API só inicia depois que o
-PostgreSQL está saudável. CORS da API liberado apenas para a origem configurada em `WEB_URL`.
+PostgreSQL e o Redis estão saudáveis. CORS da API liberado apenas para a origem configurada em `WEB_URL`.
+
+Para rebuilds, reconstrua apenas o serviço alterado (`docker compose up -d --build api` ou
+`... --build web`). Ao reconstruir a stack inteira, serialize os builds com
+`COMPOSE_PARALLEL_LIMIT=1` para reduzir o pico de memória da build no WSL.
 
 No primeiro início (ou após `docker:reset`), o entrypoint do contêiner da API aplica as
 migrations e executa o seed automaticamente (`prisma migrate deploy` + `prisma db seed`),

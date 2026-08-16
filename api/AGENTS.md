@@ -28,7 +28,7 @@ Implemented:
   `Attempt.score`, and `Player.points` increases by the score. Reusing the same
   mission more than once is prevented by `@@unique([playerId, missionId])` and the
   `P2002` handling;
-- `ranking` module: top 10 players ordered by points with deterministic
+- `ranking` module: all players ordered by points with deterministic
   tie-breaking;
 - shared HTTP contracts in the `contracts/` package used at the API boundary;
 - Vitest unit tests for the services;
@@ -36,7 +36,14 @@ Implemented:
   development;
 - `realtime` module: WebSocket gateway (public, read-only) that broadcasts
   `ranking.updated` and `player.score.updated` events after a mission completion
-  commits.
+  commits;
+- `redis` infrastructure module (`src/infrastructure/redis/`): a small
+  `RedisService` wrapping a lazy-connected `ioredis` client with `get`, `set`
+  with an expiry (`EX`), and `delete`. The client connects during startup and
+  closes cleanly during shutdown. The connection URL and the default
+  session-oriented TTL (600 seconds) come from configuration (`REDIS_URL`,
+  `REDIS_TTL_SECONDS`). No gameplay data is stored yet; this is the first step
+  toward temporary gameplay session state.
 
 ## Foundation Conventions
 
@@ -72,12 +79,15 @@ Current modules include:
 - `ranking`
 - `realtime`
 
+Cross-cutting infrastructure lives under `src/infrastructure/` (`database`,
+`redis`).
+
 There is no standalone `attempts` module: mission completions are recorded
 through the `Attempt` Prisma model inside the `missions` module.
 
 Keep responsibilities inside their respective modules.
 
-Do not introduce microservices, message brokers, Redis, repositories, factories, or additional architectural layers without a concrete requirement.
+Do not introduce microservices, message brokers, repositories, factories, or additional architectural layers without a concrete requirement.
 
 ## Business Logic
 
@@ -99,6 +109,19 @@ Use Prisma for database access.
 PostgreSQL is the persistent source of truth.
 
 Prefer database constraints when enforcing data integrity.
+
+## Redis
+
+Redis is used for temporary, session-oriented state only. Access it exclusively
+through the `redis` infrastructure module (`RedisService`); never talk to a Redis
+client directly from business modules.
+
+The Redis URL and the default session TTL come from the configuration layer
+(`REDIS_URL`, `REDIS_TTL_SECONDS`, default 600). Do not hardcode a TTL or a
+connection URL elsewhere.
+
+PostgreSQL remains the source of truth: anything that must survive restarts
+belongs in the database, not in Redis.
 
 ## Realtime
 
