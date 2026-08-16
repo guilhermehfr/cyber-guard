@@ -33,6 +33,11 @@ export const envValidationSchema = Joi.object({
 
   JWT_EXPIRES_IN: Joi.string().default("1d"),
 
+  AUTH_COOKIE_NAME: Joi.string().default("cyberguard.session"),
+  AUTH_COOKIE_MARKER_NAME: Joi.string().default("cyberguard.auth"),
+  AUTH_COOKIE_SECURE: Joi.boolean(),
+  AUTH_COOKIE_SAMESITE: Joi.string().valid("lax", "strict", "none"),
+
   GOOGLE_CLIENT_ID: Joi.string().required(),
 
   GOOGLE_CLIENT_SECRET: Joi.string().required(),
