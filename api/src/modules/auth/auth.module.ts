@@ -9,7 +9,11 @@ import { PlayersModule } from "@/modules/players/players.module.js";
 
 import { AuthController } from "./auth.controller.js";
 import { AuthService } from "./auth.service.js";
+import { GoogleOAuthExceptionFilter } from "./google-oauth-exception.filter.js";
+import { GoogleAuthGuard } from "./guards/google-auth.guard.js";
+import { OAuthStateStore } from "./oauth-state.store.js";
 import { PasswordService } from "./password.service.js";
+import { GoogleStrategy } from "./strategies/google.strategy.js";
 import { JwtStrategy } from "./strategies/jwt.strategy.js";
 
 @Module({
@@ -29,7 +33,15 @@ import { JwtStrategy } from "./strategies/jwt.strategy.js";
     PlayersModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, PasswordService],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    PasswordService,
+    GoogleStrategy,
+    GoogleAuthGuard,
+    GoogleOAuthExceptionFilter,
+    OAuthStateStore,
+  ],
   exports: [JwtModule],
 })
 export class AuthModule {}

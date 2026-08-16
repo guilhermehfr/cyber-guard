@@ -11,6 +11,13 @@ import type { LoginDto } from "./dto/login.dto.js";
 import type { RegisterDto } from "./dto/register.dto.js";
 // biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { PasswordService } from "./password.service.js";
+import { GoogleOAuthFailureException } from "./google-oauth-error.js";
+import type { GoogleIdentity } from "./strategies/google-profile.js";
+
+export interface AuthResult {
+  accessToken: string;
+  player: PlayerProfile;
+}
 
 @Injectable()
 export class AuthService {
@@ -72,6 +79,41 @@ export class AuthService {
     const completedMissions = await this.playersService.countCompletedMissions(player.id);
 
     return this.toPlayerProfile(player, completedMissions);
+  }
+
+  async authenticateWithGoogle(identity: GoogleIdentity): Promise<AuthResult> {
+    const existingByGoogleId = await this.playersService.findByGoogleId(identity.googleId);
+    if (existingByGoogleId) {
+      return this.toAuthResult(existingByGoogleId);
+    }
+
+    const existingByEmail = await this.playersService.findByEmail(identity.email);
+    if (existingByEmail) {
+      if (existingByEmail.googleId !== null) {
+        throw new GoogleOAuthFailureException();
+      }
+
+      const linked = await this.playersService.linkGoogleId(existingByEmail.id, identity.googleId);
+      return this.toAuthResult(linked);
+    }
+
+    const created = await this.playersService.create({
+      name: identity.name,
+      email: identity.email,
+      googleId: identity.googleId,
+      passwordHash: null,
+    });
+
+    return this.toAuthResult(created);
+  }
+
+  private async toAuthResult(player: Player): Promise<AuthResult> {
+    const completedMissions = await this.playersService.countCompletedMissions(player.id);
+
+    return {
+      accessToken: await this.signToken(player),
+      player: await this.toPlayerProfile(player, completedMissions),
+    };
   }
 
   private signToken(player: Player): Promise<string> {
