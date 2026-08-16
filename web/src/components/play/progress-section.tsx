@@ -4,7 +4,6 @@ import { CheckCircle2, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { authApi } from "@/features/auth/api/auth.api";
-import { getAccessToken } from "@/features/auth/lib/session";
 import { missionsApi } from "@/features/missions/api/missions.api";
 
 type Status = "loading" | "error" | "success";
@@ -19,16 +18,8 @@ export function ProgressSection() {
     let active = true;
 
     async function loadProgress() {
-      const token = getAccessToken();
-      if (!token) {
-        if (active) {
-          setStatus("error");
-        }
-        return;
-      }
-
       try {
-        const [profile, missions] = await Promise.all([authApi.me(token), missionsApi.list()]);
+        const [profile, missions] = await Promise.all([authApi.me(), missionsApi.list()]);
 
         if (active) {
           setPoints(profile.points);

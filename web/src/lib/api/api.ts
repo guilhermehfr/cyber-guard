@@ -1,3 +1,5 @@
+import { getAccessToken } from "@/features/auth/lib/session";
+
 import { ApiError, type ApiErrorData } from "./errors";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -41,11 +43,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     });
   }
 
+  const token = getAccessToken();
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
+
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
+      ...authHeaders,
       ...init?.headers,
     },
   });

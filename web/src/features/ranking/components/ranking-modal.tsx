@@ -3,9 +3,10 @@
 import { AlertTriangle, Trophy, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { RankingResponse } from "@/features/ranking/types";
+import type { RankingCurrentPlayer, RankingResponse } from "@/features/ranking/types";
 
 import { rankingApi } from "../api/ranking.api";
+import { RankingEntry } from "./ranking-entry";
 import { RankingList } from "./ranking-list";
 import { RankingPodium } from "./ranking-podium";
 
@@ -15,6 +16,15 @@ interface RankingModalProps {
 }
 
 type Status = "loading" | "error" | "success";
+
+function toRankingEntry(currentPlayer: RankingCurrentPlayer) {
+  return {
+    position: currentPlayer.position,
+    id: currentPlayer.id,
+    name: "Você",
+    points: currentPlayer.points,
+  };
+}
 
 const FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
@@ -112,9 +122,6 @@ export function RankingModal({ open, onClose }: RankingModalProps) {
 
   const entries = ranking?.entries ?? [];
   const currentPlayer = ranking?.currentPlayer ?? null;
-  const currentPlayerInEntries = currentPlayer
-    ? entries.some((entry) => entry.id === currentPlayer.id)
-    : false;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -156,7 +163,7 @@ export function RankingModal({ open, onClose }: RankingModalProps) {
           </button>
         </header>
 
-        <div className="max-h-[60vh] overflow-y-auto px-6 py-6">
+        <div className="theme-scroll max-h-[60vh] overflow-y-auto px-6 py-6">
           {status === "loading" && <RankingSkeleton />}
 
           {status === "error" && (
@@ -190,15 +197,17 @@ export function RankingModal({ open, onClose }: RankingModalProps) {
               <RankingPodium entries={entries.slice(0, 3)} currentPlayerId={currentPlayer?.id} />
               {entries.length > 3 && (
                 <div className="border-t border-border pt-4">
-                  <RankingList entries={entries.slice(3)} currentPlayerId={currentPlayer?.id} />
+                  <RankingList
+                    entries={entries.slice(3)}
+                    currentPlayerId={currentPlayer?.id}
+                    anchor={currentPlayer ? toRankingEntry(currentPlayer) : undefined}
+                  />
                 </div>
               )}
-
-              {currentPlayer && !currentPlayerInEntries && (
-                <p className="flex items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm font-medium text-foreground">
-                  <Trophy className="h-4 w-4 text-warning" aria-hidden="true" />
-                  Sua posição #{currentPlayer.position} • {currentPlayer.points} pts
-                </p>
+              {currentPlayer && entries.length <= 3 && (
+                <div className="border-t border-border pt-4">
+                  <RankingEntry entry={toRankingEntry(currentPlayer)} anchor />
+                </div>
               )}
             </div>
           )}

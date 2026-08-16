@@ -84,12 +84,9 @@ function PodiumSlot({
       <span className="text-xs font-bold tracking-wider text-muted-foreground">
         #{entry.position}
       </span>
-      <span className="w-full truncate text-sm font-semibold text-foreground">{entry.name}</span>
-      {isCurrent && (
-        <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
-          Você
-        </span>
-      )}
+      <span className="w-full truncate text-sm font-semibold text-foreground">
+        {isCurrent ? "Você" : entry.name}
+      </span>
       <span className="text-sm font-bold tabular-nums text-muted-foreground">
         {entry.points} pts
       </span>

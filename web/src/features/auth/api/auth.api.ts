@@ -5,7 +5,7 @@ import { api } from "@/lib/api/api";
 export interface AuthApi {
   register(payload: RegisterRequest): Promise<AuthResponse>;
   login(payload: LoginRequest): Promise<AuthResponse>;
-  me(token: string): Promise<PlayerProfile>;
+  me(): Promise<PlayerProfile>;
 }
 
 export const authApi: AuthApi = {
@@ -17,9 +17,7 @@ export const authApi: AuthApi = {
     return api.post<AuthResponse>("/auth/login", payload);
   },
 
-  me(token: string): Promise<PlayerProfile> {
-    return api.get<PlayerProfile>("/auth/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  me(): Promise<PlayerProfile> {
+    return api.get<PlayerProfile>("/auth/me");
   },
 };
