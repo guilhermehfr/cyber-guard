@@ -52,7 +52,7 @@ jobs:
         run: pnpm --filter @cyber/web lint
 
       - name: Web typecheck
-        run: pnpm --filter @cyber/web exec tsc --noEmit
+        run: pnpm --filter @cyber/web typecheck
 
       - name: Web build
         run: pnpm --filter @cyber/web build
