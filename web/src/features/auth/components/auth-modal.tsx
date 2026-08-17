@@ -12,13 +12,20 @@ export type AuthMode = "register" | "login";
 interface AuthModalProps {
   open: boolean;
   onClose: () => void;
+  initialMode?: AuthMode;
+  error?: string | null;
 }
 
 const FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
-export function AuthModal({ open, onClose }: AuthModalProps) {
-  const [mode, setMode] = useState<AuthMode>("register");
+export function AuthModal({
+  open,
+  onClose,
+  initialMode = "register",
+  error = null,
+}: AuthModalProps) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -140,6 +147,15 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
         </div>
 
         <div className="px-6 py-6">
+          {error && (
+            <p
+              role="alert"
+              className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {error}
+            </p>
+          )}
+
           {mode === "register" ? (
             <RegisterForm
               onRegistered={handleRegistered}
