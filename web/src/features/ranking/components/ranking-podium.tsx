@@ -88,7 +88,7 @@ function PodiumSlot({
         {isCurrent ? "Você" : entry.name}
       </span>
       <span className="text-sm font-bold tabular-nums text-muted-foreground">
-        {entry.points} pts
+        {entry.points ?? 0} pts
       </span>
     </div>
   );

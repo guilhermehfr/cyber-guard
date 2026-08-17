@@ -6,14 +6,19 @@ interface RankingListProps {
   entries: RankingEntry[];
   currentPlayerId?: string | null;
   anchor?: RankingEntry;
+  showCurrentNeutral?: boolean;
 }
 
-export function RankingList({ entries, currentPlayerId, anchor }: RankingListProps) {
+export function RankingList({ entries, currentPlayerId, anchor, showCurrentNeutral = true }: RankingListProps) {
   return (
     <ul className="flex flex-col gap-1">
       {anchor && <RankingRow entry={anchor} anchor />}
       {entries.map((entry) => (
-        <RankingRow key={entry.id} entry={entry} isCurrent={entry.id === currentPlayerId} />
+        <RankingRow
+          key={entry.id}
+          entry={entry}
+          isCurrent={showCurrentNeutral && entry.id === currentPlayerId}
+        />
       ))}
     </ul>
   );

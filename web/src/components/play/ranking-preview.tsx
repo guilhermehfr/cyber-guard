@@ -1,10 +1,15 @@
 "use client";
 
 import { Trophy } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { rankingApi } from "@/features/ranking/api/ranking.api";
 import { RankingModal } from "@/features/ranking/components/ranking-modal";
 import type { RankingEntry } from "@/features/ranking/types";
+import {
+  acquireRealtimeConnection,
+  realtimeClient,
+  releaseRealtimeConnection,
+} from "@/lib/websocket";
 
 type Status = "loading" | "error" | "success";
 
@@ -13,27 +18,38 @@ export function RankingPreview() {
   const [entries, setEntries] = useState<RankingEntry[]>([]);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    let active = true;
+  const loadPreview = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setStatus("loading");
+    }
+    try {
+      const data = await rankingApi.getRanking();
+      setEntries(data.entries);
+      setStatus("success");
+    } catch {
+      if (!options?.silent) {
+        setStatus("error");
+      }
+    }
+  }, []);
 
-    void rankingApi
-      .getRanking()
-      .then((data) => {
-        if (active) {
-          setEntries(data.entries);
-          setStatus("success");
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setStatus("error");
-        }
-      });
+  useEffect(() => {
+    void loadPreview();
+  }, [loadPreview]);
+
+  useEffect(() => {
+    acquireRealtimeConnection();
+    const unsubscribe = realtimeClient.onEvent((event) => {
+      if (event.event === "ranking.updated") {
+        void loadPreview({ silent: true });
+      }
+    });
 
     return () => {
-      active = false;
+      unsubscribe();
+      releaseRealtimeConnection();
     };
-  }, []);
+  }, [loadPreview]);
 
   return (
     <section

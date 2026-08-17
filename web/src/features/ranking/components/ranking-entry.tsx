@@ -30,7 +30,7 @@ export function RankingEntry({ entry, isCurrent = false, anchor = false }: Ranki
         {anchor ? "Você" : isCurrent ? "Sua posição" : entry.name}
       </span>
       <span className="text-sm font-semibold tabular-nums text-muted-foreground">
-        {entry.points} pts
+        {entry.points ?? 0} pts
       </span>
     </li>
   );

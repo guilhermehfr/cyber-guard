@@ -4,6 +4,11 @@ import { AlertTriangle, Trophy, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { RankingCurrentPlayer, RankingResponse } from "@/features/ranking/types";
+import {
+  acquireRealtimeConnection,
+  realtimeClient,
+  releaseRealtimeConnection,
+} from "@/lib/websocket";
 
 import { rankingApi } from "../api/ranking.api";
 import { RankingEntry } from "./ranking-entry";
@@ -53,14 +58,18 @@ export function RankingModal({ open, onClose }: RankingModalProps) {
   const [ranking, setRanking] = useState<RankingResponse | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  const loadRanking = useCallback(async () => {
-    setStatus("loading");
+  const loadRanking = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setStatus("loading");
+    }
     try {
       const data = await rankingApi.getRanking();
       setRanking(data);
       setStatus("success");
     } catch {
-      setStatus("error");
+      if (!options?.silent) {
+        setStatus("error");
+      }
     }
   }, []);
 
@@ -68,6 +77,24 @@ export function RankingModal({ open, onClose }: RankingModalProps) {
     if (open) {
       void loadRanking();
     }
+  }, [open, loadRanking]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    acquireRealtimeConnection();
+    const unsubscribe = realtimeClient.onEvent((event) => {
+      if (event.event === "ranking.updated") {
+        void loadRanking({ silent: true });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      releaseRealtimeConnection();
+    };
   }, [open, loadRanking]);
 
   useEffect(() => {
@@ -197,11 +224,16 @@ export function RankingModal({ open, onClose }: RankingModalProps) {
               <RankingPodium entries={entries.slice(0, 3)} currentPlayerId={currentPlayer?.id} />
               {entries.length > 3 && (
                 <div className="border-t border-border pt-4">
-                  <RankingList
-                    entries={entries.slice(3)}
-                    currentPlayerId={currentPlayer?.id}
-                    anchor={currentPlayer ? toRankingEntry(currentPlayer) : undefined}
-                  />
+                   <RankingList
+                      entries={entries.slice(3)}
+                      currentPlayerId={currentPlayer?.id}
+                      anchor={currentPlayer ? toRankingEntry(currentPlayer) : undefined}
+                      showCurrentNeutral={
+                        currentPlayer
+                          ? !entries.slice(0, 3).some((entry) => entry.id === currentPlayer.id)
+                          : false
+                      }
+                    />
                 </div>
               )}
               {currentPlayer && entries.length <= 3 && (

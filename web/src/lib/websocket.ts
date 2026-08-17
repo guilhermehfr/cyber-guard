@@ -74,3 +74,19 @@ export class RealtimeClient {
     }
   }
 }
+
+export const realtimeClient = new RealtimeClient();
+
+let activeSubscribers = 0;
+
+export function acquireRealtimeConnection(): void {
+  activeSubscribers += 1;
+  realtimeClient.connect();
+}
+
+export function releaseRealtimeConnection(): void {
+  activeSubscribers = Math.max(0, activeSubscribers - 1);
+  if (activeSubscribers === 0) {
+    realtimeClient.disconnect();
+  }
+}
