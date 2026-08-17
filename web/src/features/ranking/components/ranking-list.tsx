@@ -9,7 +9,12 @@ interface RankingListProps {
   showCurrentNeutral?: boolean;
 }
 
-export function RankingList({ entries, currentPlayerId, anchor, showCurrentNeutral = true }: RankingListProps) {
+export function RankingList({
+  entries,
+  currentPlayerId,
+  anchor,
+  showCurrentNeutral = true,
+}: RankingListProps) {
   return (
     <ul className="flex flex-col gap-1">
       {anchor && <RankingRow entry={anchor} anchor />}

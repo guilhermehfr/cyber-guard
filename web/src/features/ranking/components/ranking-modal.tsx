@@ -224,16 +224,16 @@ export function RankingModal({ open, onClose }: RankingModalProps) {
               <RankingPodium entries={entries.slice(0, 3)} currentPlayerId={currentPlayer?.id} />
               {entries.length > 3 && (
                 <div className="border-t border-border pt-4">
-                   <RankingList
-                      entries={entries.slice(3)}
-                      currentPlayerId={currentPlayer?.id}
-                      anchor={currentPlayer ? toRankingEntry(currentPlayer) : undefined}
-                      showCurrentNeutral={
-                        currentPlayer
-                          ? !entries.slice(0, 3).some((entry) => entry.id === currentPlayer.id)
-                          : false
-                      }
-                    />
+                  <RankingList
+                    entries={entries.slice(3)}
+                    currentPlayerId={currentPlayer?.id}
+                    anchor={currentPlayer ? toRankingEntry(currentPlayer) : undefined}
+                    showCurrentNeutral={
+                      currentPlayer
+                        ? !entries.slice(0, 3).some((entry) => entry.id === currentPlayer.id)
+                        : false
+                    }
+                  />
                 </div>
               )}
               {currentPlayer && entries.length <= 3 && (
