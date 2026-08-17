@@ -8,12 +8,15 @@ import type { PlayersService } from "@/modules/players/players.service.js";
 import { AuthService } from "./auth.service.js";
 import type { LoginDto } from "./dto/login.dto.js";
 import type { RegisterDto } from "./dto/register.dto.js";
+import { GoogleOAuthFailureException } from "./google-oauth-error.js";
 import type { PasswordService } from "./password.service.js";
+import type { GoogleIdentity } from "./strategies/google-profile.js";
 
 const player: Player = {
   id: "cltest0000000000000001",
   name: "Ada",
   email: "ada@example.com",
+  googleId: null,
   passwordHash: "$argon2id$v=19$m=65536,t=3,p=4$test-hash",
   points: 0,
   createdAt: new Date("2026-08-14T12:00:00.000Z"),
@@ -30,8 +33,10 @@ const playerProfile = {
 
 function createMocks() {
   const findByEmail = vi.fn();
+  const findByGoogleId = vi.fn();
   const findById = vi.fn();
   const create = vi.fn();
+  const linkGoogleId = vi.fn();
   const countCompletedMissions = vi.fn();
   const hash = vi.fn();
   const verify = vi.fn();
@@ -39,8 +44,10 @@ function createMocks() {
 
   const playersService = {
     findByEmail,
+    findByGoogleId,
     findById,
     create,
+    linkGoogleId,
     countCompletedMissions,
   } as unknown as PlayersService;
   const passwordService = { hash, verify } as unknown as PasswordService;
@@ -48,8 +55,10 @@ function createMocks() {
 
   return {
     findByEmail,
+    findByGoogleId,
     findById,
     create,
+    linkGoogleId,
     countCompletedMissions,
     hash,
     verify,
@@ -216,6 +225,119 @@ describe("AuthService", () => {
       const service = createService(mocks);
 
       await expect(service.me(player.id)).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+  });
+
+  describe("authenticateWithGoogle", () => {
+    const googleIdentity: GoogleIdentity = {
+      googleId: "google-sub-123",
+      email: "google@example.com",
+      name: "Google User",
+    };
+
+    it("authenticates an existing player found by googleId without creating a duplicate", async () => {
+      const mocks = createMocks();
+      mocks.findByGoogleId.mockResolvedValue({ ...player, googleId: "google-sub-123" });
+      mocks.countCompletedMissions.mockResolvedValue(2);
+      mocks.signAsync.mockResolvedValue("signed-token");
+      const service = createService(mocks);
+
+      const result = await service.authenticateWithGoogle(googleIdentity);
+
+      expect(mocks.findByGoogleId).toHaveBeenCalledWith("google-sub-123");
+      expect(mocks.findByEmail).not.toHaveBeenCalled();
+      expect(mocks.create).not.toHaveBeenCalled();
+      expect(mocks.signAsync).toHaveBeenCalledWith({
+        sub: player.id,
+        email: player.email,
+        name: player.name,
+      });
+      expect(result).toEqual({
+        accessToken: "signed-token",
+        player: { ...playerProfile, completedMissions: 2 },
+      });
+    });
+
+    it("links googleId to an existing email account whose googleId is null", async () => {
+      const mocks = createMocks();
+      mocks.findByGoogleId.mockResolvedValue(null);
+      mocks.findByEmail.mockResolvedValue({ ...player, googleId: null });
+      mocks.linkGoogleId.mockResolvedValue({ ...player, googleId: "google-sub-123" });
+      mocks.countCompletedMissions.mockResolvedValue(1);
+      mocks.signAsync.mockResolvedValue("signed-token");
+      const service = createService(mocks);
+
+      const result = await service.authenticateWithGoogle(googleIdentity);
+
+      expect(mocks.findByEmail).toHaveBeenCalledWith("google@example.com");
+      expect(mocks.linkGoogleId).toHaveBeenCalledWith(player.id, "google-sub-123");
+      expect(mocks.create).not.toHaveBeenCalled();
+      expect(result.accessToken).toBe("signed-token");
+    });
+
+    it("rejects when the email is already bound to a different Google identity", async () => {
+      const mocks = createMocks();
+      mocks.findByGoogleId.mockResolvedValue(null);
+      mocks.findByEmail.mockResolvedValue({ ...player, googleId: "another-google-sub" });
+      const service = createService(mocks);
+
+      await expect(service.authenticateWithGoogle(googleIdentity)).rejects.toBeInstanceOf(
+        GoogleOAuthFailureException,
+      );
+      expect(mocks.linkGoogleId).not.toHaveBeenCalled();
+      expect(mocks.create).not.toHaveBeenCalled();
+      expect(mocks.signAsync).not.toHaveBeenCalled();
+    });
+
+    it("creates a new player without a password for an unknown Google identity", async () => {
+      const mocks = createMocks();
+      mocks.findByGoogleId.mockResolvedValue(null);
+      mocks.findByEmail.mockResolvedValue(null);
+      mocks.create.mockResolvedValue({
+        ...player,
+        id: "new-player-id",
+        name: "Google User",
+        email: "google@example.com",
+        googleId: "google-sub-123",
+        passwordHash: null,
+      });
+      mocks.countCompletedMissions.mockResolvedValue(0);
+      mocks.signAsync.mockResolvedValue("signed-token");
+      const service = createService(mocks);
+
+      const result = await service.authenticateWithGoogle(googleIdentity);
+
+      expect(mocks.create).toHaveBeenCalledWith({
+        name: "Google User",
+        email: "google@example.com",
+        googleId: "google-sub-123",
+        passwordHash: null,
+      });
+      expect(mocks.linkGoogleId).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        accessToken: "signed-token",
+        player: {
+          id: "new-player-id",
+          name: "Google User",
+          email: "google@example.com",
+          points: 0,
+          completedMissions: 0,
+        },
+      });
+    });
+
+    it("does not place googleId in the JWT payload", async () => {
+      const mocks = createMocks();
+      mocks.findByGoogleId.mockResolvedValue({ ...player, googleId: "google-sub-123" });
+      mocks.countCompletedMissions.mockResolvedValue(0);
+      mocks.signAsync.mockResolvedValue("signed-token");
+      const service = createService(mocks);
+
+      await service.authenticateWithGoogle(googleIdentity);
+
+      const payload = mocks.signAsync.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(payload).toEqual({ sub: player.id, email: player.email, name: player.name });
+      expect(payload).not.toHaveProperty("googleId");
     });
   });
 });
