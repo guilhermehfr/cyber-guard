@@ -120,6 +120,33 @@ Protected endpoints must require valid authentication.
 
 Never trust user identity or authorization data supplied directly by the client.
 
+Browser sessions are cookie-based. On successful register or login the API sets:
+
+- an HttpOnly session cookie (`AUTH_COOKIE_NAME`, default `cyberguard.session`) that
+  holds the JWT. Browser JavaScript never has access to it;
+- a non-HttpOnly marker cookie (`AUTH_COOKIE_MARKER_NAME`, default `cyberguard.auth`)
+  set to `1`. It is only an auth-state indicator for the frontend and never contains
+  the JWT.
+
+The cookie lifetime is derived from the JWT `exp` claim, so it stays synchronized
+with the JWT lifetime.
+
+SameSite/Secure defaults depend on `NODE_ENV`:
+
+- development: `SameSite=Lax` and `Secure=false` (local ports differ but are still
+  same-site);
+- production: `SameSite=None` and `Secure=true` (cross-domain cookies).
+
+`AUTH_COOKIE_SECURE` and `AUTH_COOKIE_SAMESITE` environment variables override the
+defaults.
+
+Bearer authentication remains supported as a fallback for curl and tests: JWT
+extraction prefers the configured auth cookie and falls back to
+`Authorization: Bearer ...`.
+
+Logout is `POST /auth/logout`. It is an authenticated endpoint, returns HTTP `204`,
+and clears both the session cookie and the marker cookie.
+
 ## WebSocket
 
 A WebSocket gateway in the `realtime` module broadcasts `ranking.updated` and

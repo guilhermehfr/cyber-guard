@@ -1,17 +1,14 @@
-import type { AuthResponse, PlayerProfile } from "@cyber/contracts";
+import type { PlayerProfile } from "@cyber/contracts";
 import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
-// biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { JwtService } from "@nestjs/jwt";
 import type { Player } from "@prisma/client";
 
-// biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { PlayersService } from "@/modules/players/players.service.js";
 
 import type { LoginDto } from "./dto/login.dto.js";
 import type { RegisterDto } from "./dto/register.dto.js";
-// biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
-import { PasswordService } from "./password.service.js";
 import { GoogleOAuthFailureException } from "./google-oauth-error.js";
+import { PasswordService } from "./password.service.js";
 import type { GoogleIdentity } from "./strategies/google-profile.js";
 
 export interface AuthResult {
@@ -27,7 +24,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<AuthResponse> {
+  async register(dto: RegisterDto): Promise<AuthResult> {
     const email = dto.email.trim().toLowerCase();
     const existing = await this.playersService.findByEmail(email);
     if (existing) {
@@ -49,7 +46,7 @@ export class AuthService {
     };
   }
 
-  async login(dto: LoginDto): Promise<AuthResponse> {
+  async login(dto: LoginDto): Promise<AuthResult> {
     const email = dto.email.trim().toLowerCase();
     const player = await this.playersService.findByEmail(email);
 
@@ -92,7 +89,6 @@ export class AuthService {
       if (existingByEmail.googleId !== null) {
         throw new GoogleOAuthFailureException();
       }
-
       const linked = await this.playersService.linkGoogleId(existingByEmail.id, identity.googleId);
       return this.toAuthResult(linked);
     }

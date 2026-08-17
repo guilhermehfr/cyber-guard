@@ -1,30 +1,39 @@
 import type { RankingResponse } from "@cyber/contracts";
 import { Controller, Get, Req } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
-// biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { JwtService } from "@nestjs/jwt";
 
-// biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
+import type { AppConfig } from "@/config/config.js";
+
 import { RankingService } from "./ranking.service.js";
+
+interface RankingRequest {
+  headers: { authorization?: string };
+  cookies?: Record<string, string>;
+}
 
 @Controller("ranking")
 export class RankingController {
   constructor(
     private readonly rankingService: RankingService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Get()
-  async getRanking(
-    @Req() request: { headers: { authorization?: string } },
-  ): Promise<RankingResponse> {
-    return this.rankingService.getTopPlayers(
-      await this.extractPlayerId(request.headers.authorization),
-    );
+  async getRanking(@Req() request: RankingRequest): Promise<RankingResponse> {
+    return this.rankingService.getTopPlayers(await this.extractPlayerId(request));
   }
 
-  private async extractPlayerId(authorization?: string): Promise<string | null> {
-    const token = authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined;
+  private async extractPlayerId(request: RankingRequest): Promise<string | null> {
+    const cookieName =
+      this.configService.getOrThrow<AppConfig["auth"]["cookie"]["name"]>("auth.cookie.name");
+    const authorization = request.headers.authorization;
+    const token =
+      request.cookies?.[cookieName] ??
+      (authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined);
+
     if (!token) {
       return null;
     }

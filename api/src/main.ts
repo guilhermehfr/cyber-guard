@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import fastifyCookie from "@fastify/cookie";
 import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
@@ -11,6 +12,8 @@ import type { AppConfig } from "@/config/config.js";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
+
+  await app.register(fastifyCookie);
 
   app.useWebSocketAdapter(new WsAdapter(app.getHttpServer()));
 

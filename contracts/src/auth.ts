@@ -18,7 +18,6 @@ export interface PlayerProfile {
 }
 
 export interface AuthResponse {
-  accessToken: string;
   player: PlayerProfile;
 }
 

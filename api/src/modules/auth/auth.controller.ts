@@ -1,13 +1,23 @@
 import type { AuthenticatedUser, AuthResponse, PlayerProfile } from "@cyber/contracts";
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res, UseFilters, UseGuards } from "@nestjs/common";
+import type { CookieSerializeOptions } from "@fastify/cookie";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  UseFilters,
+  UseGuards,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import type { JwtService } from "@nestjs/jwt";
+import { JwtService } from "@nestjs/jwt";
 
-// biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
-import { AuthService } from "./auth.service.js";
-// biome-ignore lint/style/useImportType: NestJS validation uses the runtime metatype.
+import type { AppConfig } from "@/config/config.js";
+import { type AuthResult, AuthService } from "./auth.service.js";
 import { LoginDto } from "./dto/login.dto.js";
-// biome-ignore lint/style/useImportType: NestJS validation uses the runtime metatype.
 import { RegisterDto } from "./dto/register.dto.js";
 import { GoogleOAuthExceptionFilter } from "./google-oauth-exception.filter.js";
 import { GoogleAuthGuard } from "./guards/google-auth.guard.js";
@@ -16,16 +26,17 @@ import { OAuthStateStore } from "./oauth-state.store.js";
 import { GoogleStrategy } from "./strategies/google.strategy.js";
 
 export interface AuthCookieReply {
-  setCookie(name: string, value: string, options: Record<string, unknown>): unknown;
-  clearCookie(name: string, options: Record<string, unknown>): unknown;
+  setCookie(name: string, value: string, options: CookieSerializeOptions): void;
+  clearCookie(name: string, options?: CookieSerializeOptions): void;
 }
 
-export interface AuthCallbackReply extends AuthCookieReply {
-  redirect(url: string, status?: number): unknown;
+interface AuthCallbackReply extends AuthCookieReply {
+  redirect(url: string, statusCode: number): unknown;
 }
 
-interface GoogleAuthRedirectReply {
-  code(status: number): { redirect(url: string): unknown };
+export interface GoogleAuthRedirectReply {
+  code(statusCode: number): GoogleAuthRedirectReply;
+  redirect(url: string): unknown;
 }
 
 @Controller("auth")
@@ -42,7 +53,7 @@ export class AuthController {
   async register(
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: AuthCookieReply,
-  ): Promise<{ player: PlayerProfile }> {
+  ): Promise<AuthResponse> {
     const { accessToken, player } = await this.authService.register(dto);
     this.setAuthCookies(res, accessToken);
     return { player };
@@ -52,7 +63,7 @@ export class AuthController {
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: AuthCookieReply,
-  ): Promise<{ player: PlayerProfile }> {
+  ): Promise<AuthResponse> {
     const { accessToken, player } = await this.authService.login(dto);
     this.setAuthCookies(res, accessToken);
     return { player };
@@ -81,7 +92,7 @@ export class AuthController {
   @UseGuards(GoogleAuthGuard)
   @UseFilters(GoogleOAuthExceptionFilter)
   googleCallback(
-    @Req() request: { user: { accessToken: string } },
+    @Req() request: { user: AuthResult },
     @Res({ passthrough: true }) res: AuthCallbackReply,
   ): unknown {
     this.setAuthCookies(res, request.user.accessToken);
@@ -89,12 +100,8 @@ export class AuthController {
   }
 
   private setAuthCookies(res: AuthCookieReply, accessToken: string): void {
-    const { name, markerName, secure, sameSite } = this.configService.getOrThrow<{
-      name: string;
-      markerName: string;
-      secure: boolean;
-      sameSite: "lax" | "strict" | "none";
-    }>("auth.cookie");
+    const { name, markerName, secure, sameSite } =
+      this.configService.getOrThrow<AppConfig["auth"]["cookie"]>("auth.cookie");
 
     const cookieOptions = {
       path: "/",
@@ -114,15 +121,15 @@ export class AuthController {
   }
 
   private clearAuthCookies(res: AuthCookieReply): void {
-    const { name, markerName } = this.configService.getOrThrow<{ name: string; markerName: string }>(
-      "auth.cookie",
-    );
+    const { name, markerName } =
+      this.configService.getOrThrow<AppConfig["auth"]["cookie"]>("auth.cookie");
+
     res.clearCookie(name, { path: "/" });
     res.clearCookie(markerName, { path: "/" });
   }
 
   private cookieMaxAgeSeconds(accessToken: string): number | undefined {
-    const exp = this.jwtService.decode(accessToken)?.exp as number | undefined;
+    const exp = this.jwtService.decode<{ exp?: number }>(accessToken)?.exp;
     if (exp === undefined) {
       return undefined;
     }
@@ -130,6 +137,6 @@ export class AuthController {
   }
 
   private get webUrl(): string {
-    return this.configService.getOrThrow<string[]>("app.webUrl")[0];
+    return this.configService.getOrThrow<AppConfig["app"]["webUrl"]>("app.webUrl")[0];
   }
 }

@@ -3,14 +3,15 @@ import type { ConfigService } from "@nestjs/config";
 import type { JwtService } from "@nestjs/jwt";
 import { describe, expect, it, vi } from "vitest";
 
-import { type AuthCallbackReply, AuthController, type AuthCookieReply } from "./auth.controller.js";
+import {
+  type AuthCallbackReply,
+  AuthController,
+  type AuthCookieReply,
+  type GoogleAuthRedirectReply,
+} from "./auth.controller.js";
 import type { AuthService } from "./auth.service.js";
 import type { OAuthStateStore } from "./oauth-state.store.js";
 import type { GoogleStrategy } from "./strategies/google.strategy.js";
-
-interface GoogleAuthRedirectReply {
-  redirect(url: string): unknown;
-}
 
 const playerProfile: PlayerProfile = {
   id: "cltest0000000000000001",
