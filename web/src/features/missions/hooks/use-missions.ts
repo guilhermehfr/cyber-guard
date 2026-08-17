@@ -8,12 +8,14 @@ export type MissionsStatus = "loading" | "error" | "success";
 export interface UseMissionsResult {
   status: MissionsStatus;
   byDifficulty: Record<Difficulty, Mission[]>;
+  completedMissionIds: ReadonlySet<string>;
   retry: () => void;
 }
 
 export function useMissions(): UseMissionsResult {
   const [status, setStatus] = useState<MissionsStatus>("loading");
   const [missions, setMissions] = useState<Mission[]>([]);
+  const [completedMissionIds, setCompletedMissionIds] = useState<ReadonlySet<string>>(new Set());
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -21,11 +23,11 @@ export function useMissions(): UseMissionsResult {
     let active = true;
     setStatus("loading");
 
-    void missionsApi
-      .list()
-      .then((data) => {
+    Promise.all([missionsApi.list(), missionsApi.completed()])
+      .then(([data, completed]) => {
         if (active) {
           setMissions(data);
+          setCompletedMissionIds(new Set(completed.missionIds));
           setStatus("success");
         }
       })
@@ -50,5 +52,5 @@ export function useMissions(): UseMissionsResult {
 
   const retry = useCallback(() => setReloadKey((key) => key + 1), []);
 
-  return { status, byDifficulty, retry };
+  return { status, byDifficulty, completedMissionIds, retry };
 }

@@ -3,29 +3,28 @@
 import { ArrowLeft, Hourglass, Trophy } from "lucide-react";
 import { useEffect, useRef } from "react";
 
+import type { CompleteMissionResponse } from "@/features/missions/types";
+
 export type MissionResultStatus = "finished" | "timeout";
 
 interface MissionFinishProps {
   status: MissionResultStatus;
-  correctCount: number;
-  totalQuestions: number;
-  points: number;
+  result?: CompleteMissionResponse;
   onExit: () => void;
 }
 
-export function MissionFinish({
-  status,
-  correctCount,
-  totalQuestions,
-  points,
-  onExit,
-}: MissionFinishProps) {
+export function MissionFinish({ status, result, onExit }: MissionFinishProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const completed = status === "finished";
 
   useEffect(() => {
     headingRef.current?.focus();
   }, []);
+
+  const correctCount = result?.correctCount ?? 0;
+  const totalQuestions = result?.totalQuestions ?? 0;
+  const pointsAwarded = result?.pointsAwarded ?? 0;
+  const playerPoints = result?.playerPoints;
 
   return (
     <div className="mx-auto flex w-full max-w-xl animate-card-enter flex-col items-center gap-4 rounded-2xl border border-border bg-card px-6 py-16 text-center shadow-sm sm:py-20">
@@ -68,13 +67,17 @@ export function MissionFinish({
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Pontuação
           </p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{points} pts</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">
+            {completed ? `+${pointsAwarded} pts` : "0 pts"}
+          </p>
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Resultado desta sessão de treino. A pontuação oficial é registrada pelo servidor.
-      </p>
+      {completed && playerPoints !== undefined && (
+        <p className="text-xs text-muted-foreground">
+          Você agora tem {playerPoints} pts no ranking.
+        </p>
+      )}
 
       <button
         type="button"

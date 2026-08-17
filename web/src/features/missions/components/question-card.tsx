@@ -2,10 +2,10 @@
 
 import { useEffect, useRef } from "react";
 
-import type { MockQuestion } from "../lib/mock-questions";
+import type { MissionQuestion } from "@/features/missions/types";
 
 interface QuestionCardProps {
-  question: MockQuestion;
+  question: MissionQuestion;
   questionNumber: number;
 }
 
@@ -30,13 +30,8 @@ export function QuestionCard({ question, questionNumber }: QuestionCardProps) {
         tabIndex={-1}
         className="mx-auto mt-4 max-w-2xl font-display text-2xl font-bold leading-snug text-foreground outline-none sm:text-3xl"
       >
-        {question.text}
+        {question.prompt}
       </h2>
-      {question.context && (
-        <p className="mx-auto mt-5 max-w-xl rounded-lg bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          {question.context}
-        </p>
-      )}
     </section>
   );
 }

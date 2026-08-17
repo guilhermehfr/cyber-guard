@@ -14,7 +14,6 @@ type Phase = "idle" | "expanding" | "expanded" | "collapsing";
 const EXPAND_FADE_MS = 180;
 const FLIP_MS = 420;
 const FLIP_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
-const EMPTY_MISSION_SET: ReadonlySet<string> = new Set();
 
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") {
@@ -36,7 +35,7 @@ export function DifficultyExplorer({
   onBack,
   onSelectMission,
 }: DifficultyExplorerProps) {
-  const { status, byDifficulty, retry } = useMissions();
+  const { status, byDifficulty, completedMissionIds, retry } = useMissions();
   const [phase, setPhase] = useState<Phase>(selected ? "expanded" : "idle");
 
   const phaseRef = useRef(phase);
@@ -192,7 +191,7 @@ export function DifficultyExplorer({
 
   if (showExpanded && selected) {
     const missions = byDifficulty[selected];
-    const completedCount = missions.filter((mission) => EMPTY_MISSION_SET.has(mission.id)).length;
+    const completedCount = missions.filter((mission) => completedMissionIds.has(mission.id)).length;
     const points = missions[0]?.points ?? null;
 
     return (
@@ -216,7 +215,7 @@ export function DifficultyExplorer({
             missions={missions}
             status={status}
             retry={retry}
-            completedMissionIds={EMPTY_MISSION_SET}
+            completedMissionIds={completedMissionIds}
             onSelectMission={onSelectMission}
           />
         </div>

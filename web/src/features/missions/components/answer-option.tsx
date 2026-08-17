@@ -2,13 +2,13 @@
 
 import { Check, Circle, X } from "lucide-react";
 
-import type { MockAnswer } from "../lib/mock-questions";
+import type { MissionAnswer } from "@/features/missions/types";
 
 export type AnswerState = "idle" | "selected" | "correct" | "incorrect" | "dimmed";
 
 interface AnswerOptionProps {
   letter: string;
-  option: MockAnswer;
+  option: MissionAnswer;
   state: AnswerState;
   disabled: boolean;
   onSelect: () => void;
