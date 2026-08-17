@@ -1,8 +1,6 @@
-import { getAccessToken } from "@/features/auth/lib/session";
-
 import { ApiError, type ApiErrorData } from "./errors";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+export const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 async function parseErrorResponse(response: Response): Promise<ApiErrorData> {
   let data: ApiErrorData = {
@@ -43,15 +41,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     });
   }
 
-  const token = getAccessToken();
-  const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const hasBody = init?.body !== undefined;
 
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
+    credentials: "include",
     headers: {
       Accept: "application/json",
-      "Content-Type": "application/json",
-      ...authHeaders,
+      ...(hasBody ? { "Content-Type": "application/json" } : {}),
       ...init?.headers,
     },
   });

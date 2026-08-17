@@ -1,20 +1,24 @@
-const ACCESS_TOKEN_KEY = "cyberGuard.accessToken";
+const AUTH_MARKER_COOKIE = "cyberguard.auth";
 
 const AUTH_BYPASS =
   process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
 
-export function getAccessToken(): string | null {
+function getCookie(name: string): string | null {
   if (typeof window === "undefined") {
     return null;
   }
 
-  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
+  const prefix = `${name}=`;
+  for (const part of window.document.cookie.split(";")) {
+    const trimmed = part.trim();
+    if (trimmed.startsWith(prefix)) {
+      return trimmed.slice(prefix.length);
+    }
+  }
+
+  return null;
 }
 
 export function isAuthenticated(): boolean {
-  return AUTH_BYPASS || getAccessToken() !== null;
-}
-
-export function saveAccessToken(token: string): void {
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  return AUTH_BYPASS || getCookie(AUTH_MARKER_COOKIE) === "1";
 }

@@ -7,7 +7,6 @@ import { useState } from "react";
 import { ApiError } from "@/lib/api/errors";
 
 import { authApi } from "../api/auth.api";
-import { saveAccessToken } from "../lib/session";
 import { validateLogin } from "../schemas/login.schema";
 
 interface LoginFormProps {
@@ -37,8 +36,7 @@ export function LoginForm({ onLoggedIn, onSwitchToRegister }: LoginFormProps) {
     setErrors([]);
 
     try {
-      const { accessToken } = await authApi.login(result.value);
-      saveAccessToken(accessToken);
+      await authApi.login(result.value);
       onLoggedIn();
       router.push("/play");
     } catch (error) {

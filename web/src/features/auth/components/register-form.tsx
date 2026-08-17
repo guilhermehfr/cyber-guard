@@ -7,7 +7,6 @@ import { useState } from "react";
 import { ApiError } from "@/lib/api/errors";
 
 import { authApi } from "../api/auth.api";
-import { saveAccessToken } from "../lib/session";
 import { validateRegister } from "../schemas/register.schema";
 
 interface RegisterFormProps {
@@ -38,8 +37,7 @@ export function RegisterForm({ onRegistered, onSwitchToLogin }: RegisterFormProp
     setErrors([]);
 
     try {
-      const { accessToken } = await authApi.register(result.value);
-      saveAccessToken(accessToken);
+      await authApi.register(result.value);
       onRegistered();
       router.push("/play");
     } catch (error) {
