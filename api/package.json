@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
-    "prebuild": "prisma generate",
+    "prebuild": "pnpm --filter @cyber/contracts build && prisma generate",
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
     "db:seed": "prisma db seed",
