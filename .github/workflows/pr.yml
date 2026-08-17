@@ -1,0 +1,60 @@
+name: PR Quality Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cyberguard
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Contracts
+        run: pnpm --filter @cyber/contracts build
+
+      - name: Generate Prisma client
+        run: pnpm --filter @cyber/api prisma:generate
+
+      - name: API lint
+        run: pnpm --filter @cyber/api lint
+
+      - name: API typecheck
+        run: pnpm --filter @cyber/api exec tsc --noEmit
+
+      - name: API tests
+        run: pnpm --filter @cyber/api test
+
+      - name: API build
+        run: pnpm --filter @cyber/api build
+
+      - name: Web lint
+        run: pnpm --filter @cyber/web lint
+
+      - name: Web typecheck
+        run: pnpm --filter @cyber/web typecheck
+
+      - name: Web build
+        run: pnpm --filter @cyber/web build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3000

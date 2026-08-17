@@ -52,6 +52,17 @@ Use the shared contracts from the root `contracts/` package when applicable.
 
 Do not duplicate API types manually when an existing shared contract exists.
 
+The API base URL is provided through environment variables, never hardcoded:
+
+- `NEXT_PUBLIC_API_URL` — used by browser-side code; embedded in the bundle during
+  `next build`, so it must be set at build time (e.g. `http://localhost:3000` locally,
+  the public API URL in production).
+- `API_URL` — used by server-side code; resolved at runtime and may use the internal
+  Docker service name (e.g. `http://api:3000`).
+
+The API runs on port `3000`. The frontend runs on port `3002` with local `pnpm dev`
+and on port `3001` in the Docker/containerized workflow.
+
 ## Quiz
 
 Quiz state may be managed locally for UI purposes.
@@ -60,7 +71,11 @@ The frontend must not assume that locally stored answers, scores, or completion 
 
 ## Realtime
 
-WebSocket is used for leaderboard and player score updates.
+A WebSocket client (`web/src/lib/websocket.ts`) connects to the API `/realtime`
+gateway and receives `ranking.updated` and `player.score.updated` events.
+
+Realtime events are used to invalidate or refresh UI state; the authoritative data
+is always fetched over REST.
 
 Do not use WebSocket where a normal HTTP request is sufficient.
 

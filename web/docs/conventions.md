@@ -43,6 +43,31 @@ Do not duplicate backend response types manually.
 
 Do not calculate authoritative scores on the client.
 
+The API base URL must come from environment variables, never hardcoded:
+
+- `NEXT_PUBLIC_API_URL` for browser-side code (embedded at build time);
+- `API_URL` for server-side code (runtime, may use the Docker service name).
+
+The API runs on port `3000`. The frontend runs on port `3002` with local `pnpm dev`
+and on port `3001` in the Docker/containerized workflow.
+
+## Authentication
+
+Authentication relies on an HttpOnly session cookie set by the API
+(`cyberguard.session`); the token is never exposed to browser JavaScript.
+
+Requests must send `credentials: "include"` so the browser includes the cookie
+on cross-origin calls to the API.
+
+Client-side code determines the authenticated state by reading the non-HttpOnly
+marker cookie `cyberguard.auth` (set to `1` when signed in) via
+`isAuthenticated()` in `features/auth/lib/session.ts`. The marker reflects the
+server-issued session and is cleared together with the session cookie by
+`POST /auth/logout`.
+
+Do not store tokens in `localStorage`. Log out by calling `authApi.logout()` and
+then navigating away.
+
 ## Quiz Flow
 
 The frontend may maintain the current quiz state locally.
@@ -57,12 +82,13 @@ The backend validates the submitted answers and determines the authoritative res
 
 ## Realtime
 
-WebSocket updates are used for:
+A WebSocket connection (`web/src/lib/websocket.ts`) receives realtime events from
+the API gateway on `/realtime`.
 
-- leaderboard changes;
-- current player's score changes.
+Realtime events signal that server-side state changed; the client should refetch
+the affected REST resources. The ranking is still loaded via `GET /ranking`.
 
-Realtime messages should update or invalidate relevant UI state.
+Do not send credentials or sensitive data over the realtime channel.
 
 ## Styling
 

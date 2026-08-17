@@ -1,0 +1,49 @@
+import Joi from "joi";
+
+export const envValidationSchema = Joi.object({
+  NODE_ENV: Joi.string().valid("development", "production", "test").default("development"),
+
+  PORT: Joi.number().default(3000),
+
+  WEB_URL: Joi.string()
+    .custom((value: string, helpers) => {
+      const urls = value
+        .split(",")
+        .map((url) => url.trim())
+        .filter(Boolean);
+      for (const url of urls) {
+        const { error } = Joi.string().uri().validate(url);
+        if (error) {
+          return helpers.error("any.invalid");
+        }
+      }
+      return value;
+    })
+    .default("http://localhost:3001"),
+
+  DATABASE_URL: Joi.string().required(),
+
+  REDIS_URL: Joi.string()
+    .uri({ scheme: ["redis", "rediss"] })
+    .required(),
+
+  REDIS_TTL_SECONDS: Joi.number().integer().min(1).default(600),
+
+  JWT_SECRET: Joi.string().min(32).required(),
+
+  JWT_EXPIRES_IN: Joi.string().default("1d"),
+
+  AUTH_COOKIE_NAME: Joi.string().default("cyberguard.session"),
+
+  AUTH_COOKIE_MARKER_NAME: Joi.string().default("cyberguard.auth"),
+
+  AUTH_COOKIE_SECURE: Joi.boolean(),
+
+  AUTH_COOKIE_SAMESITE: Joi.string().valid("lax", "strict", "none"),
+
+  GOOGLE_CLIENT_ID: Joi.string().required(),
+
+  GOOGLE_CLIENT_SECRET: Joi.string().required(),
+
+  GOOGLE_CALLBACK_URL: Joi.string().uri().required(),
+});

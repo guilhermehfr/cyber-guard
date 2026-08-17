@@ -1,16 +1,39 @@
-export interface ServiceHealth {
-  name: string;
-  status: 'up' | 'degraded' | 'down';
-  version: string;
-}
+export type {
+  AuthResponse,
+  AuthenticatedUser,
+  JwtPayload,
+  LoginRequest,
+  PlayerProfile,
+  RegisterRequest,
+} from "./auth.js";
 
-export interface ApiResponse<T> {
-  ok: boolean;
-  data: T;
-  error?: string;
-}
+export type { ApiErrorBody } from "./error.js";
 
-export interface Greeting {
-  message: string;
-  timestamp: string;
-}
+export type {
+  CompleteMissionRequest,
+  CompleteMissionResponse,
+  CompletedMissionIdsResponse,
+  Difficulty,
+  Mission,
+  MissionAnswer,
+  MissionCompletion,
+  MissionQuestion,
+  MissionQuestionsResponse,
+  StartMissionResponse,
+  SubmitAnswerRequest,
+  SubmitAnswerResponse,
+} from "./mission.js";
+
+export type {
+  RankingCurrentPlayer,
+  RankingEntry,
+  RankingResponse,
+} from "./ranking.js";
+
+export type {
+  PlayerScoreUpdatedEvent,
+  RankingUpdatedEvent,
+  RealtimeEvent,
+  RealtimeEventMap,
+  RealtimeEventName,
+} from "./realtime.js";

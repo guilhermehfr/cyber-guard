@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# @cyber/web
 
-## Getting Started
+Frontend da plataforma CyberGuard, construído com Next.js.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Next.js 16 (App Router + Turbopack)
+- React 19
+- Tailwind CSS 4
+- @cyber/contracts para contratos HTTP compartilhados com a API
+- Biome para formatação e lint
+- pnpm como gerenciador de pacotes (monorepo)
+
+## Requisitos
+
+- Node.js 22+
+- pnpm 11+
+
+## Setup
+
+Instale as dependências na raiz do monorepo:
+
+```sh
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Crie o arquivo de ambiente local a partir do exemplo:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```sh
+cp .env.local.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Variáveis de ambiente
 
-## Learn More
+| Variável                | Uso                                     | Exemplo (dev local)   |
+| ----------------------- | --------------------------------------- | --------------------- |
+| `NEXT_PUBLIC_API_URL`   | URL da API vista pelo browser           | `http://localhost:3000` |
+| `API_URL`               | URL da API usada no server-side         | `http://api:3000`       |
 
-To learn more about Next.js, take a look at the following resources:
+`NEXT_PUBLIC_API_URL` é embutida no bundle durante o `next build` — por isso
+deve ser fornecida no build (no Docker, via build arg `NEXT_PUBLIC_API_URL`).
+Em produção, use a URL pública real da API; não há domínio fixo no código.
+`API_URL` é lida em tempo de execução no server-side e pode usar o nome do
+serviço interno (ex.: `http://api:3000` no Docker Compose).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```sh
+pnpm dev      # servidor de desenvolvimento em http://localhost:3002
+pnpm build    # build de produção
+pnpm start    # executa o build em http://localhost:3001
+pnpm lint     # biome check .
+pnpm format   # biome format --write .
+```
 
-## Deploy on Vercel
+A API roda na porta `3000`. O frontend usa portas diferentes conforme o fluxo:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Desenvolvimento local** (`pnpm dev`): `http://localhost:3002`;
+- **Docker/containerizado** (`pnpm start` / container): `http://localhost:3001`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+As portas são definidas nos scripts (`next dev -p 3002` / `next start -p 3001`) e
+no container via `PORT=3001`.
+
+## Docker
+
+A imagem é construída a partir do `web/Dockerfile` (multi-stage, pnpm). O build
+recebe `NEXT_PUBLIC_API_URL` como argumento:
+
+```sh
+docker build \
+  --build-arg NEXT_PUBLIC_API_URL=https://api.exemplo.com \
+  -f web/Dockerfile .
+```
+
+No Docker Compose, a Web expõe `3001:3001`, conecta-se à API por
+`http://api:3000` (server-side) e só inicia após a API ficar saudável.
+
+## Estrutura
+
+```text
+src/
+├── app/                    # Rotas (App Router)
+│   ├── layout.tsx
+│   ├── page.tsx
+│   └── play/
+│       └── page.tsx
+├── components/             # Componentes de UI
+│   ├── landing/
+│   ├── layout/
+│   └── play/
+├── features/               # Recursos por domínio
+│   └── auth/
+├── lib/
+│   ├── api/                # Cliente HTTP
+│   └── websocket.ts
+└── proxy.ts
+```
