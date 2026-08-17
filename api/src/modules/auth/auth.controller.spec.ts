@@ -28,7 +28,14 @@ const cookieConfig = {
   sameSite: "lax",
 };
 
-function createController() {
+const productionCookieConfig = {
+  name: "cyberguard.session",
+  markerName: "cyberguard.auth",
+  secure: true,
+  sameSite: "none",
+};
+
+function createController(cookie: typeof cookieConfig = cookieConfig) {
   const login = vi.fn();
   const register = vi.fn();
   const me = vi.fn();
@@ -42,7 +49,7 @@ function createController() {
   const configService = { getOrThrow } as unknown as ConfigService;
   getOrThrow.mockImplementation((key: string) => {
     if (key === "auth.cookie") {
-      return cookieConfig;
+      return cookie;
     }
     if (key === "app.webUrl") {
       return ["http://localhost:3001"];
@@ -157,8 +164,52 @@ describe("AuthController", () => {
 
       expect(result).toBeUndefined();
       expect(clearCookie).toHaveBeenCalledTimes(2);
-      expect(clearCookie).toHaveBeenCalledWith("cyberguard.session", { path: "/" });
-      expect(clearCookie).toHaveBeenCalledWith("cyberguard.auth", { path: "/" });
+      const clearOptions = { path: "/", secure: false, sameSite: "lax", partitioned: false };
+      expect(clearCookie).toHaveBeenCalledWith("cyberguard.session", clearOptions);
+      expect(clearCookie).toHaveBeenCalledWith("cyberguard.auth", clearOptions);
+    });
+
+    it("clears the cookies with the same attributes used to set them in production", () => {
+      const { controller, clearCookie, reply } = createController(productionCookieConfig);
+
+      controller.logout(reply);
+
+      const clearOptions = { path: "/", secure: true, sameSite: "none", partitioned: true };
+      expect(clearCookie).toHaveBeenCalledWith("cyberguard.session", clearOptions);
+      expect(clearCookie).toHaveBeenCalledWith("cyberguard.auth", clearOptions);
+    });
+  });
+
+  describe("partitioned cookies", () => {
+    it("marks both cookies as partitioned when they are secure and cross-site", async () => {
+      const { controller, login, setCookie, reply } = createController(productionCookieConfig);
+      login.mockResolvedValue({ accessToken: "signed-token", player: playerProfile });
+
+      await controller.login({ email: "ada@example.com", password: "s3cret-password" }, reply);
+
+      const [sessionCall, markerCall] = setCookie.mock.calls;
+      expect(sessionCall[2]).toMatchObject({
+        secure: true,
+        sameSite: "none",
+        partitioned: true,
+        httpOnly: true,
+      });
+      expect(markerCall[2]).toMatchObject({
+        secure: true,
+        sameSite: "none",
+        partitioned: true,
+        httpOnly: false,
+      });
+    });
+
+    it("does not partition the cookies in a same-site development setup", async () => {
+      const { controller, login, setCookie, reply } = createController();
+      login.mockResolvedValue({ accessToken: "signed-token", player: playerProfile });
+
+      await controller.login({ email: "ada@example.com", password: "s3cret-password" }, reply);
+
+      expect(setCookie.mock.calls[0]?.[2]?.partitioned).toBe(false);
+      expect(setCookie.mock.calls[1]?.[2]?.partitioned).toBe(false);
     });
   });
 

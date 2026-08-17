@@ -39,6 +39,18 @@ export interface GoogleAuthRedirectReply {
   redirect(url: string): unknown;
 }
 
+/**
+ * Partitioned cookies (CHIPS) keep the session usable when the API and the web
+ * app live on different sites and the browser restricts third-party cookies.
+ * The attribute requires Secure and only applies to cross-site cookies.
+ */
+function isPartitioned(
+  secure: boolean,
+  sameSite: AppConfig["auth"]["cookie"]["sameSite"],
+): boolean {
+  return secure && sameSite === "none";
+}
+
 @Controller("auth")
 export class AuthController {
   constructor(
@@ -107,6 +119,7 @@ export class AuthController {
       path: "/",
       secure,
       sameSite,
+      partitioned: isPartitioned(secure, sameSite),
       maxAge: this.cookieMaxAgeSeconds(accessToken),
     };
 
@@ -121,11 +134,20 @@ export class AuthController {
   }
 
   private clearAuthCookies(res: AuthCookieReply): void {
-    const { name, markerName } =
+    const { name, markerName, secure, sameSite } =
       this.configService.getOrThrow<AppConfig["auth"]["cookie"]>("auth.cookie");
 
-    res.clearCookie(name, { path: "/" });
-    res.clearCookie(markerName, { path: "/" });
+    // The attributes must match the ones used when the cookie was set,
+    // otherwise the browser keeps the partitioned cookie in place.
+    const clearOptions = {
+      path: "/",
+      secure,
+      sameSite,
+      partitioned: isPartitioned(secure, sameSite),
+    };
+
+    res.clearCookie(name, clearOptions);
+    res.clearCookie(markerName, clearOptions);
   }
 
   private cookieMaxAgeSeconds(accessToken: string): number | undefined {

@@ -140,6 +140,13 @@ SameSite/Secure defaults depend on `NODE_ENV`:
 `AUTH_COOKIE_SECURE` and `AUTH_COOKIE_SAMESITE` environment variables override the
 defaults.
 
+Cross-site cookies (`Secure` and `SameSite=None`) are additionally marked
+`Partitioned` (CHIPS), so the session survives the browser restrictions on
+third-party cookies that apply when the API and the web app are served from
+different sites. Same-site setups are never partitioned, because the attribute
+requires `Secure`. Logout clears the cookies with the same attributes used to set
+them; otherwise the browser does not match the partitioned cookie.
+
 Bearer authentication remains supported as a fallback for curl and tests: JWT
 extraction prefers the configured auth cookie and falls back to
 `Authorization: Bearer ...`.
