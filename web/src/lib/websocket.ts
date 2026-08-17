@@ -2,13 +2,17 @@ import type { RealtimeEvent } from "@cyber/contracts";
 
 type RealtimeListener = (event: RealtimeEvent) => void;
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+// The realtime gateway needs an absolute API URL: when the API is proxied under
+// the web app's origin, NEXT_PUBLIC_API_URL is a relative path and rewrites do
+// not forward WebSocket upgrades. The gateway is public, so connecting to the
+// API directly is fine.
+const WS_BASE = process.env.NEXT_PUBLIC_WS_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "";
 
 function realtimeUrl(): string {
-  if (!API_URL) {
-    throw new Error("NEXT_PUBLIC_API_URL is not configured");
+  if (!WS_BASE) {
+    throw new Error("NEXT_PUBLIC_WS_URL is not configured");
   }
-  return `${API_URL.replace(/^http/, "ws")}/realtime`;
+  return `${WS_BASE.replace(/^http/, "ws")}/realtime`;
 }
 
 function isRealtimeEvent(value: unknown): value is RealtimeEvent {

@@ -46,10 +46,22 @@ Do not calculate authoritative scores on the client.
 The API base URL must come from environment variables, never hardcoded:
 
 - `NEXT_PUBLIC_API_URL` for browser-side code (embedded at build time);
-- `API_URL` for server-side code (runtime, may use the Docker service name).
+- `API_URL` for server-side code (runtime, may use the Docker service name);
+- `NEXT_PUBLIC_WS_URL` for the realtime WebSocket, which always needs an
+  absolute API URL.
 
 The API runs on port `3000`. The frontend runs on port `3002` with local `pnpm dev`
 and on port `3001` in the Docker/containerized workflow.
+
+When the API is deployed on a different domain than the web app, the browser must
+still reach it same-origin, otherwise the session cookies are third-party and the
+auth marker cookie becomes unreadable to browser JavaScript. The Next.js config
+rewrites `/api/:path*` to `API_URL`, and `NEXT_PUBLIC_API_URL` is set to the
+relative `/api` so every request keeps the web app's own origin.
+
+WebSocket upgrades are not forwarded by rewrites, so the realtime client connects
+straight to the API through `NEXT_PUBLIC_WS_URL`. That gateway is public and
+carries no cookies, so a cross-origin connection is fine.
 
 ## Authentication
 
