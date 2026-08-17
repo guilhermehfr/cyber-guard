@@ -5,12 +5,12 @@
 Uma plataforma gamificada de aprendizado em segurança digital, onde jogadores completam missões, respondem perguntas, ganham pontos e competem em um ranking em tempo real.
 
 [![License: MIT](https://img.shields.io/github/license/guilhermehfr/cyber-guard)](https://github.com/guilhermehfr/cyber-guard/blob/dev/LICENSE)
-[![GitHub](https://img.shields.io/badge/GitHub-Reposit%C3%B3rio-181717?logo=github&logoColor=white)](https://github.com/guilhermehfr/cyber-guard)
 [![Vercel](https://img.shields.io/badge/Vercel-Demo-000000?logo=vercel&logoColor=white)](https://cyberguard-aexp.vercel.app)
 [![Render](https://img.shields.io/badge/Render-API-46E3B7?logo=render&logoColor=white)](https://cyber-guard-8j1x.onrender.com)
 
-**Backend:** NestJS · Fastify · Prisma · PostgreSQL · Redis
-**Frontend:** Next.js · React · TypeScript
+
+**Backend:** NestJS · Fastify · Prisma · PostgreSQL · Redis  
+**Frontend:** Next.js · React · TypeScript  
 **Infraestrutura/Tooling:** Docker Compose · pnpm · Vitest · Biome
 
 <img src="https://github.com/user-attachments/assets/d9e1aef3-1709-4975-8cca-7d64ad18962f" alt="CyberGuard" width="820" />
