@@ -1,5 +1,4 @@
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-// biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { ConfigService } from "@nestjs/config";
 import type { Redis } from "ioredis";
 

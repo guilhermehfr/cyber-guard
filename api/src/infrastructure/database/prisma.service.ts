@@ -1,5 +1,4 @@
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-// biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { ConfigService } from "@nestjs/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";

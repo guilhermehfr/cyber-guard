@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 
 import { Injectable } from "@nestjs/common";
 
-// biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { RedisService } from "@/infrastructure/redis/redis.service.js";
 
 const SESSION_KEY_PREFIX = "game-session:";

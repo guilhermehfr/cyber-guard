@@ -1,7 +1,6 @@
 import type { RankingCurrentPlayer, RankingResponse } from "@cyber/contracts";
 import { Injectable } from "@nestjs/common";
 
-// biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { PrismaService } from "@/infrastructure/database/prisma.service.js";
 
 @Injectable()

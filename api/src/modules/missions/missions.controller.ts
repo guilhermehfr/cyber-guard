@@ -11,11 +11,8 @@ import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/comm
 
 import { JwtAuthGuard } from "@/modules/auth/guards/jwt-auth.guard.js";
 
-// biome-ignore lint/style/useImportType: NestJS validation uses the runtime metatype.
 import { CompleteMissionDto } from "./dto/complete-mission.dto.js";
-// biome-ignore lint/style/useImportType: NestJS validation uses the runtime metatype.
 import { SubmitAnswerDto } from "./dto/submit-answer.dto.js";
-// biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { MissionsService } from "./missions.service.js";
 
 @Controller("missions")

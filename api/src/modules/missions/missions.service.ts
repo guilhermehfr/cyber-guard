@@ -17,13 +17,10 @@ import {
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
-// biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { PrismaService } from "@/infrastructure/database/prisma.service.js";
 
-// biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { RealtimeGateway } from "@/modules/realtime/realtime.gateway.js";
 
-// biome-ignore lint/style/useImportType: NestJS DI requires the runtime class reference.
 import { GameSessionService } from "./game-session.service.js";
 
 @Injectable()
