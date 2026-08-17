@@ -147,9 +147,7 @@ async function main() {
 
   await seedMissions(prisma);
   const { questions, answers } = await seedQuestions(prisma);
-  console.log(
-    `Seed finished: ${questions} questions created, ${answers} answers created.`,
-  );
+  console.log(`Seed finished: ${questions} questions created, ${answers} answers created.`);
 
   await prisma.$disconnect();
 }
@@ -182,32 +180,36 @@ async function seedQuestions(
   let questions = 0;
   let answers = 0;
 
-  for (const [difficulty, seedQuestions] of Object.entries(QUESTIONS_BY_DIFFICULTY)) {
-    const mission = await prisma.mission.findFirst({
+  for (const [difficulty, questionSets] of Object.entries(QUESTIONS_BY_DIFFICULTY)) {
+    const missions = await prisma.mission.findMany({
       where: { difficulty: difficulty as (typeof MISSIONS)[number]["difficulty"] },
       orderBy: { createdAt: "asc" },
     });
-    if (!mission) {
-      throw new Error(`Cannot seed questions: no ${difficulty} mission found`);
+    if (missions.length !== questionSets.length) {
+      throw new Error(
+        `Cannot seed questions: ${difficulty} has ${missions.length} missions but ${questionSets.length} question sets`,
+      );
     }
 
-    for (const question of seedQuestions) {
-      await prisma.question.create({
-        data: {
-          id: question.id,
-          missionId: mission.id,
-          prompt: question.prompt,
-          answers: {
-            create: question.answers.map((answer) => ({
-              id: answer.id,
-              text: answer.text,
-              isCorrect: answer.isCorrect,
-            })),
+    for (let i = 0; i < questionSets.length; i += 1) {
+      for (const question of questionSets[i]) {
+        await prisma.question.create({
+          data: {
+            id: question.id,
+            missionId: missions[i].id,
+            prompt: question.prompt,
+            answers: {
+              create: question.answers.map((answer) => ({
+                id: answer.id,
+                text: answer.text,
+                isCorrect: answer.isCorrect,
+              })),
+            },
           },
-        },
-      });
-      questions += 1;
-      answers += question.answers.length;
+        });
+        questions += 1;
+        answers += question.answers.length;
+      }
     }
   }
 
