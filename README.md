@@ -2,7 +2,7 @@
 
 # 🛡️ CyberGuard
 
-Uma plataforma gamificada de aprendizado em segurança digital, onde jogadores completam missões, respondem perguntas, ganham pontos e competem em um ranking em tempo real.
+A gamified digital security learning platform where players complete missions, answer questions, earn points, and compete on a real-time leaderboard.
 
 [![License: MIT](https://img.shields.io/github/license/guilhermehfr/cyber-guard)](https://github.com/guilhermehfr/cyber-guard/blob/dev/LICENSE)
 [![Vercel](https://img.shields.io/badge/Vercel-Demo-000000?logo=vercel&logoColor=white)](https://cyberguard-aexp.vercel.app)
@@ -11,11 +11,13 @@ Uma plataforma gamificada de aprendizado em segurança digital, onde jogadores c
 
 **Backend:** NestJS · Fastify · Prisma · PostgreSQL · Redis  
 **Frontend:** Next.js · React · TypeScript  
-**Infraestrutura/Tooling:** Docker Compose · pnpm · Vitest · Biome
+**Infrastructure/Tooling:** Docker Compose · pnpm · Vitest · Biome
+
+🌐 _[Leia em Português](README-pt-br.md)_
 
 <img src="https://github.com/user-attachments/assets/d9e1aef3-1709-4975-8cca-7d64ad18962f" alt="CyberGuard" width="820" />
 
-[GitHub](https://github.com/guilhermehfr/cyber-guard) · [Demo](https://cyberguard-aexp.vercel.app) · [Reportar um Bug](https://github.com/guilhermehfr/cyber-guard/issues)
+[GitHub](https://github.com/guilhermehfr/cyber-guard) · [Demo](https://cyberguard-aexp.vercel.app) · [Report a Bug](https://github.com/guilhermehfr/cyber-guard/issues)
 
 </div>
 
@@ -23,34 +25,29 @@ Uma plataforma gamificada de aprendizado em segurança digital, onde jogadores c
 
 ## ✨ Features
 
-- **Cadastro e login** com e-mail e senha, com hashing de senha via Argon2.
-- **Autenticação via JWT armazenado em cookie HttpOnly**, o que impede que o token seja acessado diretamente por JavaScript no navegador.
-- **Login social com Google (OAuth 2.0)**, com fluxo de estado (`state`) próprio para proteção contra CSRF no callback.
-- **Rotas protegidas** no backend via `JwtAuthGuard`/estratégia Passport-JWT, e gate de acesso no frontend com base no estado de sessão.
-- **Gerenciamento de sessão** via cookie HttpOnly (token) + cookie auxiliar não-HttpOnly (indicador de "está autenticado") lido pelo frontend.
-- **Logout** que invalida a sessão no navegador limpando ambos os cookies.
-- **Missões gamificadas** com três níveis de dificuldade (Fácil, Médio, Difícil), cada uma com pontuação própria.
-- **Perguntas e respostas por missão**, com fluxo de início de missão, envio de respostas e finalização.
-- **Cálculo de pontuação feito integralmente no backend**, nunca confiando em valores enviados pelo cliente.
-- **Prevenção de conclusão duplicada de missão**, com validação em nível de aplicação e em nível de banco de dados.
-- **Ranking de jogadores** com critérios de desempate determinísticos.
-- **Atualização do ranking em tempo real via WebSocket**, refletindo automaticamente novas pontuações sem a necessidade de recarregar a página.
-- **Interface de jogo responsiva**, com seleção de dificuldade, missões, tela de perguntas e tela de resultado.
+- **Sign-up and login** with email and password, with password hashing via Argon2.
+- **JWT authentication stored in an HttpOnly cookie**, preventing the token from being accessed directly by browser JavaScript.
+- **Google social login (OAuth 2.0)**, with its own `state` flow for CSRF protection on the callback.
+- **Protected routes** on the backend via `JwtAuthGuard`/Passport-JWT strategy, and access gating on the frontend based on session state.
+- **Gamified missions** with three difficulty levels (Easy, Medium, Hard), each with its own scoring.
+- **Questions and answers per mission**, with a flow for starting a mission, submitting answers, and finishing.
+- **Player leaderboard** with deterministic tiebreak criteria.
+- **Real-time leaderboard updates via WebSocket**, automatically reflecting new scores without needing to reload the page.
 
-### Mecânica das missões
+### Mission mechanics
 
-Cada missão pertence a um nível de dificuldade (`EASY`, `MEDIUM` ou `HARD`), que define a pontuação total da missão. O jogador inicia uma missão, responde às suas perguntas uma a uma e, ao concluir, o backend calcula a pontuação com base no número de respostas corretas multiplicado pelos pontos da missão — o resultado nunca é calculado ou confiado a partir do cliente.
+Each mission belongs to a difficulty level (`EASY`, `MEDIUM`, or `HARD`), which determines the mission's total score. The player starts a mission, answers its questions one by one, and upon completion the backend calculates the score based on the number of correct answers multiplied by the mission's points — the result is never calculated or trusted from the client.
 
 ---
 
 ## 🛡️ Security & Integrity
 
-CyberGuard foi desenhado para que o frontend nunca seja tratado como fonte confiável de pontuação ou de estado crítico de jogo. Algumas decisões técnicas relevantes:
+CyberGuard was designed so the frontend is never treated as a trusted source for scoring or critical game state. Some relevant technical decisions:
 
-- **O frontend não é fonte de verdade.** O cliente envia apenas as respostas escolhidas pelo jogador; toda validação de corretude e todo cálculo de pontuação acontecem no backend, a partir dos dados de gabarito carregados do banco no início da missão.
-- **JWT em cookie HttpOnly.** O token de autenticação nunca é exposto ao JavaScript do navegador — ele trafega automaticamente entre navegador e API através de um cookie HttpOnly, reduzindo a superfície de exposição a ataques de XSS.
-- **Prevenção de conclusão duplicada de missão.** Além da validação em nível de serviço, existe uma constraint de unicidade no banco de dados (`@@unique([playerId, missionId])`, na tabela `Attempt`), garantindo que um jogador não possa ser pontuado duas vezes pela mesma missão mesmo sob requisições concorrentes.
-- **Conclusão de missão transacional.** A leitura da missão, a criação da tentativa (`Attempt`) e o incremento de pontos do jogador ocorrem dentro de uma transação do Prisma. Caso uma requisição concorrente viole a constraint de unicidade, o conflito é tratado como um erro de domínio apropriado (`ConflictException`), em vez de corromper o estado do jogador.
+- **The frontend is not the source of truth.** The client only sends the answers chosen by the player; all correctness validation and score calculation happen on the backend, based on answer-key data loaded from the database at the start of the mission.
+- **JWT in an HttpOnly cookie.** The authentication token is never exposed to browser JavaScript — it travels automatically between browser and API through an HttpOnly cookie, reducing the attack surface for XSS.
+- **Duplicate mission-completion prevention.** Beyond service-level validation, there's a uniqueness constraint at the database level (`@@unique([playerId, missionId])`, on the `Attempt` table), ensuring a player can't be scored twice for the same mission even under concurrent requests.
+- **Transactional mission completion.** Reading the mission, creating the attempt (`Attempt`), and incrementing the player's points happen within a single Prisma transaction. If a concurrent request violates the uniqueness constraint, the conflict is handled as an appropriate domain error (`ConflictException`) instead of corrupting the player's state.
 
 ---
 
@@ -58,71 +55,71 @@ CyberGuard foi desenhado para que o frontend nunca seja tratado como fonte confi
 
 ### Backend
 
-| Tecnologia | Uso |
+| Technology | Purpose |
 |---|---|
-| NestJS | Framework principal da API |
-| Fastify | Adapter HTTP utilizado pelo NestJS |
-| Prisma | ORM e acesso ao banco de dados |
-| PostgreSQL | Banco de dados relacional, fonte de verdade |
-| Redis | Estado temporário das sessões de jogo em andamento |
-| Passport + JWT | Autenticação baseada em token |
-| Google OAuth 2.0 | Autenticação social |
-| WebSocket (`@nestjs/websockets`) | Comunicação em tempo real com o frontend |
-| class-validator / ValidationPipe | Validação de dados de entrada |
-| Vitest | Testes unitários e de integração |
+| NestJS | Main API framework |
+| Fastify | HTTP adapter used by NestJS |
+| Prisma | ORM and database access |
+| PostgreSQL | Relational database, source of truth |
+| Redis | Temporary state for in-progress game sessions |
+| Passport + JWT | Token-based authentication |
+| Google OAuth 2.0 | Social authentication |
+| WebSocket (`@nestjs/websockets`) | Real-time communication with the frontend |
+| class-validator / ValidationPipe | Input data validation |
+| Vitest | Unit and integration testing |
 
 ### Frontend
 
-| Tecnologia | Uso |
+| Technology | Purpose |
 |---|---|
-| Next.js | Framework React com App Router |
-| React | Biblioteca de interface |
-| TypeScript | Tipagem estática |
-| Tailwind CSS | Estilização utilitária |
-| WebSocket nativo | Recebimento de eventos em tempo real da API |
-| Biome | Lint e formatação |
+| Next.js | React framework with App Router |
+| React | UI library |
+| TypeScript | Static typing |
+| Tailwind CSS | Utility-first styling |
+| Native WebSocket | Receiving real-time events from the API |
+| Biome | Linting and formatting |
 
-### Tooling & Infraestrutura
+### Tooling & Infrastructure
 
-| Ferramenta | Uso |
+| Tool | Purpose |
 |---|---|
-| TypeScript | Base de todo o monorepo |
-| pnpm | Gerenciador de pacotes e workspaces |
-| Docker Compose | Orquestração local de API, frontend, banco e Redis |
-| Biome | Padronização de código em todo o monorepo |
-| Vitest | Testes automatizados da API |
-| Prisma | Migrações e schema do banco de dados |
-| GitHub Actions | Pipeline de qualidade em pull requests |
+| TypeScript | Foundation of the entire monorepo |
+| pnpm | Package manager and workspaces |
+| Docker Compose | Local orchestration of API, frontend, database, and Redis |
+| Biome | Code standardization across the monorepo |
+| Vitest | Automated API testing |
+| Prisma | Database migrations and schema |
+| GitHub Actions | Quality pipeline on pull requests |
 
 ---
 
 ## 🎮 Gameplay
 
-O fluxo de jogo segue a seguinte jornada:
+The game flow follows this journey:
 
 ```
-Landing page → cadastro/login → área de jogo → seleção de dificuldade
-→ seleção de missão → início da missão → perguntas → envio de respostas
-→ conclusão da missão → atualização de pontuação → ranking
+Landing page → sign-up/login → game area → difficulty selection
+→ mission selection → mission start → questions → answer submission
+→ mission completion → score update → leaderboard
 ```
 
-As missões são organizadas em três níveis de dificuldade:
+Missions are organized into three difficulty levels:
 
-- **Fácil** — perguntas com 2 alternativas de resposta.
-- **Médio** — perguntas com 3 alternativas de resposta.
-- **Difícil** — perguntas com 4 alternativas de resposta.
+- **Easy** — questions with 2 answer options.
+- **Medium** — questions with 3 answer options.
+- **Hard** — questions with 4 answer options.
 
-Cada missão conta com um conjunto de perguntas, e a pontuação total da missão varia conforme o nível de dificuldade escolhido.
+Each mission has its own set of questions, and the mission's total score varies according to the chosen difficulty level.
 
-Durante o jogo, um cronômetro é exibido como elemento de gamificação e feedback visual para o jogador. A validação das respostas e o cálculo da pontuação permanecem inteiramente sob responsabilidade do backend, independentemente do tempo decorrido na interface.
+During gameplay, a timer is displayed as a gamification element and visual feedback for the player. Answer validation and score calculation remain entirely the backend's responsibility, regardless of the time elapsed in the interface.
 
 ---
 
 ## 📡 Real-time
 
-CyberGuard utiliza WebSocket para manter o ranking atualizado em tempo real. Sempre que um jogador conclui uma missão, o backend emite eventos (`ranking.updated` e `player.score.updated`) através de um gateway WebSocket público e somente leitura. O frontend escuta esses eventos para atualizar automaticamente o ranking exibido, sem necessidade de recarregar a página.
+CyberGuard uses WebSocket to keep the leaderboard updated in real time. Whenever a player completes a mission, the backend emits events (`ranking.updated` and `player.score.updated`) through a public, read-only WebSocket gateway. The frontend listens for these events to automatically update the displayed leaderboard, without needing to reload the page.
 
-O WebSocket é utilizado exclusivamente para notificação de mudanças de estado — ele não substitui a API HTTP nem participa do fluxo de autenticação; toda comunicação sensível continua acontecendo via REST.
+WebSocket is used exclusively for state-change notifications — it does not replace the HTTP API or participate in the authentication flow; all sensitive communication continues to happen via REST.
 
 ---
 
@@ -130,76 +127,76 @@ O WebSocket é utilizado exclusivamente para notificação de mudanças de estad
 
 ```
 cyber-guard/
-├── api/                        # Backend NestJS
+├── api/                        # NestJS Backend
 │   ├── src/
-│   │   ├── config/              # Configuração e validação de variáveis de ambiente
+│   │   ├── config/              # Environment variable configuration and validation
 │   │   ├── infrastructure/
-│   │   │   ├── database/        # Integração com Prisma
-│   │   │   └── redis/           # Acesso a Redis (sessões de jogo)
+│   │   │   ├── database/        # Prisma integration
+│   │   │   └── redis/           # Redis access (game sessions)
 │   │   └── modules/
-│   │       ├── auth/            # Cadastro, login, JWT, Google OAuth
-│   │       ├── missions/        # Missões, perguntas, sessões de jogo, conclusão
-│   │       ├── players/         # Consultas internas de jogadores
-│   │       ├── ranking/         # Ranking e posição dos jogadores
-│   │       └── realtime/        # Gateway WebSocket
-│   └── prisma/                  # Schema, migrações e seed do banco
+│   │       ├── auth/            # Sign-up, login, JWT, Google OAuth
+│   │       ├── missions/        # Missions, questions, game sessions, completion
+│   │       ├── players/         # Internal player queries
+│   │       ├── ranking/         # Leaderboard and player standing
+│   │       └── realtime/        # WebSocket gateway
+│   └── prisma/                  # Schema, migrations, and database seed
 │
-├── web/                        # Frontend Next.js
+├── web/                        # Next.js Frontend
 │   └── src/
-│       ├── app/                 # Rotas (App Router)
-│       ├── components/          # Componentes compartilhados de UI
+│       ├── app/                 # Routes (App Router)
+│       ├── components/          # Shared UI components
 │       ├── features/
-│       │   ├── auth/             # Login, cadastro, sessão
-│       │   ├── missions/         # Seleção e jogabilidade das missões
-│       │   └── ranking/          # Ranking e pódio
-│       └── lib/                 # Cliente HTTP e cliente WebSocket
+│       │   ├── auth/             # Login, sign-up, session
+│       │   ├── missions/         # Mission selection and gameplay
+│       │   └── ranking/          # Leaderboard and podium
+│       └── lib/                 # HTTP client and WebSocket client
 │
-├── contracts/                  # Tipos TypeScript compartilhados entre API e frontend
+├── contracts/                  # TypeScript types shared between API and frontend
 │   └── src/
 │
-├── docs/                       # Documentação complementar
-├── docker-compose.yml           # Orquestração local (API, web, PostgreSQL, Redis)
-└── pnpm-workspace.yaml           # Definição do monorepo
+├── docs/                       # Supplementary documentation
+├── docker-compose.yml           # Local orchestration (API, web, PostgreSQL, Redis)
+└── pnpm-workspace.yaml           # Monorepo definition
 ```
 
 ---
 
 ## 🧱 Architecture
 
-CyberGuard é um monorepo gerenciado com pnpm, dividido em três pacotes principais: `api` (backend), `web` (frontend) e `contracts` (tipos compartilhados).
+CyberGuard is a monorepo managed with pnpm, split into three main packages: `api` (backend), `web` (frontend), and `contracts` (shared types).
 
-O backend é um monólito modular construído em NestJS — não uma arquitetura de microsserviços —, com separação clara de responsabilidades entre os módulos `Auth`, `Missions`, `Players`, `Ranking` e `Realtime`, cada um encapsulando sua própria lógica de negócio dentro do mesmo processo e deploy. PostgreSQL, via Prisma, é a fonte de verdade dos dados.
+The backend is a modular monolith built with NestJS — not a microservices architecture — with a clear separation of concerns between the `Auth`, `Missions`, `Players`, `Ranking`, and `Realtime` modules, each encapsulating its own business logic within the same process and deployment. PostgreSQL, via Prisma, is the source of truth for data.
 
-Durante uma missão, o estado da sessão de jogo — perguntas, gabarito e respostas já enviadas pelo jogador — é mantido temporariamente no Redis, isolado do PostgreSQL, entre o início e a conclusão da missão. Ao concluir, o resultado é persistido no PostgreSQL de forma transacional e a sessão correspondente é removida do Redis; esse é o mesmo momento em que o evento de atualização em tempo real é emitido para o ranking.
+During a mission, the game session state — questions, answer key, and answers already submitted by the player — is temporarily kept in Redis, isolated from PostgreSQL, between the start and completion of the mission. Upon completion, the result is persisted to PostgreSQL transactionally and the corresponding session is removed from Redis; this is also the moment the real-time update event is emitted to the leaderboard.
 
-O pacote `contracts` concentra os tipos TypeScript compartilhados entre frontend e backend — como formatos de requisição/resposta de autenticação, missões, ranking e eventos em tempo real — evitando duplicação de tipos entre as duas aplicações.
+The `contracts` package holds the TypeScript types shared between frontend and backend — such as request/response formats for authentication, missions, leaderboard, and real-time events — avoiding type duplication between the two applications.
 
 ---
 
 ## 🧪 Testing
 
-O backend possui testes unitários para services e controllers, cobrindo autenticação, missões, ranking, infraestrutura de Redis e o gateway de tempo real. Alguns exemplos:
+The backend has unit tests for services and controllers, covering authentication, missions, leaderboard, Redis infrastructure, and the real-time gateway. Some examples:
 
-- `missions.service.spec.ts` — inclui a lógica de conclusão de missão, prevenção de duplicidade e transação.
-- `auth.controller.spec.ts` / `auth.service.spec.ts` — fluxo de cadastro, login e cookies de sessão.
-- `password.service.spec.ts` — hashing e verificação de senha.
-- `ranking.service.spec.ts` — ordenação e critérios de desempate do ranking.
-- `realtime.gateway.spec.ts` — emissão de eventos em tempo real.
-- `redis.service.spec.ts` — acesso à infraestrutura de Redis.
+- `missions.service.spec.ts` — covers mission completion logic, duplicate prevention, and transactions.
+- `auth.controller.spec.ts` / `auth.service.spec.ts` — sign-up, login, and session cookie flow.
+- `password.service.spec.ts` — password hashing and verification.
+- `ranking.service.spec.ts` — leaderboard sorting and tiebreak criteria.
+- `realtime.gateway.spec.ts` — real-time event emission.
+- `redis.service.spec.ts` — Redis infrastructure access.
 
-Os testes são executados com Vitest.
+Tests are run with Vitest.
 
 ---
 
 ## 🚀 Getting Started
 
-### Pré-requisitos
+### Prerequisites
 
 - Node.js
 - pnpm
 - Docker
 
-### Instalação
+### Installation
 
 ```bash
 git clone https://github.com/guilhermehfr/cyber-guard.git
@@ -207,7 +204,7 @@ cd cyber-guard
 pnpm install
 ```
 
-### Subindo com Docker Compose
+### Running with Docker Compose
 
 ```bash
 pnpm docker:up     # docker compose up -d --build
@@ -215,56 +212,30 @@ pnpm docker:down   # docker compose down
 pnpm docker:reset  # docker compose down -v --rmi all --remove-orphans
 ```
 
-Isso sobe os quatro serviços definidos no `docker-compose.yml`: `api` (porta 3000), `web` (porta 3001), `db` (PostgreSQL, porta 5432) e `redis` (porta 6379).
+This brings up the four services defined in `docker-compose.yml`: `api` (port 3000), `web` (port 3001), `db` (PostgreSQL, port 5432), and `redis` (port 6379).
 
-### Variáveis de ambiente
+### Environment variables
 
-A API valida suas variáveis de ambiente na inicialização (`api/src/config/env.validation.ts`). Use `api/.env.local.example` como referência:
+The API validates its environment variables on startup (`api/src/config/env.validation.ts`). Use `api/.env.local.example` as a reference. The frontend uses `web/.env.local.example` as a reference.
 
-| Variável | Obrigatória | Descrição |
-|---|---|---|
-| `NODE_ENV` | não | Ambiente de execução (padrão `development`) |
-| `PORT` | não | Porta da API (padrão `3000`) |
-| `WEB_URL` | não | Origens permitidas no CORS (padrão `http://localhost:3001`) |
-| `DATABASE_URL` | sim | String de conexão do PostgreSQL |
-| `REDIS_URL` | sim | String de conexão do Redis |
-| `REDIS_TTL_SECONDS` | não | TTL padrão das sessões de jogo no Redis |
-| `JWT_SECRET` | sim | Segredo usado para assinar o JWT (mínimo 32 caracteres) |
-| `JWT_EXPIRES_IN` | não | Validade do JWT (padrão `1d`) |
-| `AUTH_COOKIE_NAME` | não | Nome do cookie HttpOnly de sessão (padrão `cyberguard.session`) |
-| `AUTH_COOKIE_MARKER_NAME` | não | Nome do cookie auxiliar de sessão (padrão `cyberguard.auth`) |
-| `AUTH_COOKIE_SECURE` | não | Flag `Secure` do cookie |
-| `AUTH_COOKIE_SAMESITE` | não | Política `SameSite` do cookie |
-| `GOOGLE_CLIENT_ID` | sim | Client ID do OAuth do Google |
-| `GOOGLE_CLIENT_SECRET` | sim | Client Secret do OAuth do Google |
-| `GOOGLE_CALLBACK_URL` | sim | URL de callback do OAuth do Google |
+> Google OAuth credentials are required for the API to start, even if you only intend to test email/password login.
 
-O frontend usa `web/.env.local.example` como referência:
+### Running locally without Docker
 
-| Variável | Descrição |
-|---|---|
-| `NEXT_PUBLIC_API_URL` | URL pública da API, usada pelo navegador |
-| `API_URL` | URL da API usada em contexto server-side |
-| `NEXT_PUBLIC_AUTH_BYPASS` | Flag de desenvolvimento para pular a checagem de sessão (inerte em builds de produção) |
-
-> As credenciais do Google OAuth são obrigatórias para a API iniciar, mesmo que você pretenda testar apenas o login por e-mail e senha.
-
-### Rodando localmente sem Docker
-
-Com o PostgreSQL e o Redis disponíveis (localmente ou via Docker) e as variáveis de ambiente configuradas:
+With PostgreSQL and Redis available (locally or via Docker) and environment variables configured:
 
 ```bash
-pnpm --filter api prisma:migrate   # aplica as migrações
-pnpm --filter api db:seed          # popula dados de desenvolvimento
+pnpm --filter api prisma:migrate   # applies migrations
+pnpm --filter api db:seed          # seeds development data
 ```
 
-Rodando tudo em paralelo:
+Running everything in parallel:
 
 ```bash
 pnpm dev
 ```
 
-Ou rodando cada aplicação individualmente:
+Or running each application individually:
 
 ```bash
 pnpm --filter api dev   # http://localhost:3000
@@ -276,60 +247,6 @@ pnpm --filter web dev   # http://localhost:3002
 ```bash
 pnpm build
 ```
-
----
-
-## 🔐 Authentication
-
-O cadastro e o login geram um JWT no backend, que é enviado ao navegador como um cookie HttpOnly (`cyberguard.session`). Esse cookie é enviado automaticamente pelo navegador em requisições subsequentes para a API, e validado pelo `JwtAuthGuard`/estratégia Passport-JWT em rotas protegidas.
-
-Como o token não pode ser lido diretamente via JavaScript, o frontend identifica se existe uma sessão ativa através de um segundo cookie, não-HttpOnly (`cyberguard.auth`), usado apenas como indicador de estado — o token em si nunca é acessado pelo código do cliente.
-
-O login com Google segue um fluxo alternativo de OAuth 2.0: o usuário é redirecionado à tela de autenticação do Google e, ao retornar, a API resolve ou cria a conta do jogador e emite os mesmos cookies de sessão utilizados no fluxo tradicional.
-
----
-
-## 📊 Data Flow
-
-Fluxo de conclusão de uma missão:
-
-```
-Frontend envia respostas
-→ API autentica o jogador
-→ backend valida o estado da sessão da missão
-→ backend valida as respostas contra o gabarito
-→ backend calcula a pontuação
-→ banco de dados persiste a tentativa e os pontos
-→ evento de atualização é emitido
-→ ranking é atualizado
-→ frontend recebe a atualização em tempo real
-```
-
----
-
-## ⏱️ Development Deadline
-
-Projeto desenvolvido dentro de um prazo definido de desenvolvimento, priorizando entrega funcional, integridade dos dados, autenticação e experiência de jogo.
-
----
-
-## 📌 Roadmap
-
-As funcionalidades descritas na seção "✨ Features" acima refletem o que está implementado e em funcionamento hoje. Alguns pontos, no entanto, foram deliberadamente deixados fora do escopo atual, e outros são melhorias naturais para uma próxima etapa.
-
-**Fora do escopo atual**
-
-- Recuperação/redefinição de senha.
-- Painel administrativo para criação e edição de missões e perguntas (hoje feitas via seed do banco).
-- Testes automatizados no frontend.
-- Escalonamento horizontal do gateway WebSocket entre múltiplas instâncias da API.
-
-**Possíveis evoluções futuras**
-
-- Expansão do banco de perguntas e adição de novas missões.
-- Maior cobertura de testes end-to-end.
-- Uso do Redis como backend de pub/sub para permitir múltiplas instâncias do gateway de tempo real.
-- Melhorias de observabilidade (logs estruturados, métricas).
 
 ---
 
